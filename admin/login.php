@@ -23,10 +23,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     // Honeypot â€” real users never fill this hidden field (SECURITY.md Â§10.3).
     $honeypot = trim((string)($_POST['website'] ?? ''));
     if ($honeypot !== '') {
-        record_login_attempt('admin_login', client_ip(), false);
+        record_login_attempt('admin_login', 'ip:' . client_ip(), false);
         $error = 'Invalid email or password.';
     } elseif (form_submitted_too_fast(2)) {
-        record_login_attempt('admin_login', client_ip(), false);
+        record_login_attempt('admin_login', 'ip:' . client_ip(), false);
         $error = 'Too many attempts. Please try again later.';
     } else {
         $email = strtolower(trim((string)($_POST['email'] ?? '')));
@@ -36,11 +36,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $validEmail = filter_var($email, FILTER_VALIDATE_EMAIL) && strlen($email) <= 254;
 
         // Rate limits: per identity AND per IP (SECURITY.md Â§10.1).
-        $okIdentity = $validEmail
-            && rate_limit_ok('admin_login', 'email:' . $email, 5, 900);
+        // IP-bucket limit: applies to every submission, valid or malformed input.
         $okIp = rate_limit_ok('admin_login', 'ip:' . client_ip(), 20, 900);
 
+        // Identity-bucket limit only makes sense for a syntactically valid email;
+        // malformed input falls through to the generic credentials path below.
+        $okIdentity = !$validEmail || rate_limit_ok('admin_login', 'email:' . $email, 5, 900);
+
         if (!$okIp || !$okIdentity) {
+            if (!$okIdentity && $okIp) {
+                audit('login_rate_limited', null, null, null, ['identity_bucket' => true]);
+            }
             http_response_code(429);
             header('Retry-After: 900');
             $error = 'Too many attempts. Please try again later.';
