@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thread & Motif — Storefront and Admin Preview</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#111210;--muted:#686b64;--sage:#e7eae2;--canvas:#f7f7f3;--line:#e4e5df;--accent:#c7d84a}
+*{box-sizing:border-box}body{margin:0;background:#fff;color:var(--ink);font-family:'DM Sans',sans-serif}
+h1,h2,h3,.display{font-family:Manrope,sans-serif;letter-spacing:-.045em}
+.wrap{max-width:1440px;margin:auto;padding:0 32px}
+.pill{border-radius:999px}.panel{border-radius:34px}.soft{background:var(--sage)}.muted{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:12px 20px;font-size:13px;font-weight:600}
+.btn-dark{background:#111;color:white}.btn-light{background:white;border:1px solid var(--line)}
+.card{border:1px solid var(--line);border-radius:22px;overflow:hidden;background:white}
+.product-img{height:190px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.product-img img{width:100%;height:100%;object-fit:cover;transition:transform .35s}
+.product-card:hover img{transform:scale(1.04)}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;background:#f5f6f3}
+.sidebar{background:#fff;border-right:1px solid var(--line);padding:24px 16px}
+.side-link{display:flex;gap:12px;padding:11px 13px;border-radius:12px;color:#555950;font-size:14px;margin:3px 0}
+.side-link.active{background:#eef0e9;color:#151711;font-weight:700}
+.admin-content{padding:30px;min-width:0}
+.kpi{background:white;border:1px solid var(--line);border-radius:18px;padding:18px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:white}
+table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:14px 16px;border-bottom:1px solid #ecece7;font-size:13px}th{color:#777b72;font-weight:600;background:#fbfbf9}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700;background:#eff0eb}
+.badge.green{background:#e7f3e9;color:#24633b}.badge.orange{background:#fff2df;color:#875512}.badge.red{background:#fae8e6;color:#9b3932}
+.hide{display:none!important}
+@media(max-width:760px){.wrap{padding:0 16px}.admin-shell{grid-template-columns:1fr}.sidebar{display:none}.admin-content{padding:18px}.hero-grid{grid-template-columns:1fr!important}.hero-photo{min-height:250px}.product-img{height:150px}.panel{border-radius:24px}}
+</style>
+</head>
+<body>
+<div class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-stone-100">
+ <div class="wrap flex items-center justify-between py-3">
+  <a href="#" class="font-extrabold text-xl display">thread<span class="text-lime-700">&</span>motif<span class="text-xs align-top">®</span></a>
+  <div class="hidden md:flex items-center gap-2 text-xs font-semibold">
+   <a class="rounded-full bg-black text-white px-5 py-2" href="#home">HOME</a><a class="px-4 py-2" href="#shop">SHOP</a><a class="px-4 py-2" href="#collections">COLLECTIONS</a><a class="px-4 py-2" href="#about">OUR STORY</a>
+  </div>
+  <div class="flex items-center gap-2">
+   <button class="btn btn-light !p-2" aria-label="Search">⌕</button><button class="btn btn-light !p-2" aria-label="Account">♙</button><button class="btn btn-dark !p-2 px-3" aria-label="Cart">Bag · 2</button>
+  </div>
+ </div>
+</div>
+
+<div class="wrap flex justify-end py-3">
+ <div class="flex gap-2 rounded-full bg-stone-100 p-1 text-xs">
+  <button id="storeTab" class="rounded-full bg-black text-white px-4 py-2" onclick="showView('store')">Storefront preview</button>
+  <button id="adminTab" class="rounded-full px-4 py-2" onclick="showView('admin')">Admin portal preview</button>
+ </div>
+</div>
+
+<main id="storeView">
+<section id="home" class="wrap pt-2">
+ <div class="panel soft overflow-hidden">
+  <div class="hero-grid grid grid-cols-2 min-h-[440px]">
+   <div class="p-8 md:p-14 flex flex-col justify-center relative">
+    <div class="text-xs tracking-[.22em] uppercase font-bold text-stone-600 mb-5">The embroidery edit · New season</div>
+    <h1 class="display text-5xl md:text-7xl font-extrabold leading-[.98] max-w-xl">Details that make a design.</h1>
+    <p class="mt-6 text-base md:text-lg max-w-md text-stone-700">Discover expressive patches and intricate motifs, made to bring fabric, outfits and ideas to life.</p>
+    <div class="mt-8 flex gap-3 flex-wrap"><a href="#shop" class="btn btn-dark">Explore the collection ↗</a><a href="#collections" class="btn btn-light">Our collections</a></div>
+    <div class="mt-10 text-xs text-stone-600">PATCHES · MOTIFS · TEXTILE DETAILS</div>
+   </div>
+   <div class="hero-photo min-h-[360px] relative">
+    <img class="w-full h-full object-cover absolute inset-0" src="https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=1200&q=85" alt="Detailed textile and embroidery close-up">
+    <div class="absolute bottom-7 left-7 bg-white/90 backdrop-blur rounded-2xl p-4 max-w-[210px]">
+     <div class="text-[10px] uppercase tracking-widest muted">Featured story</div><div class="font-bold mt-1">The art of the detail</div><div class="text-xs muted mt-1">Explore hand-finished inspiration</div>
+    </div>
+   </div>
+  </div>
+ </div>
+ <div class="relative md:-mt-12 mx-3 md:mx-20 bg-white rounded-[28px] shadow-xl border border-stone-100 p-5 md:p-8">
+  <div class="flex items-center bg-[#f1f2ed] rounded-full px-5 py-4 gap-3"><span class="text-xl">⌕</span><input class="bg-transparent outline-none flex-1 text-sm" placeholder="Search patches, motifs, styles..." aria-label="Search products"><span>⌕</span></div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+   <a class="rounded-2xl border p-4 text-sm flex justify-between items-center" href="#shop">Popular motifs <b>↗</b></a>
+   <a class="rounded-2xl border p-4 text-sm flex justify-between items-center" href="#shop">New designs <b>↗</b></a>
+   <a class="rounded-2xl border p-4 text-sm flex justify-between items-center" href="#collections">Bridal edit <b>↗</b></a>
+   <a class="rounded-2xl bg-indigo-600 text-white p-4 text-sm flex justify-between items-center" href="#shop">Explore all <b>↗</b></a>
+  </div>
+ </div>
+</section>
+
+<section class="wrap pt-16 md:pt-20">
+ <div class="flex items-end justify-between mb-6"><div><p class="text-xs uppercase tracking-[.2em] muted">Find your finish</p><h2 class="text-2xl md:text-3xl font-bold mt-2">Explore popular categories</h2></div><a href="#shop" class="text-sm font-semibold">All categories ↗</a></div>
+ <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+  <a class="card bg-[#f0f1eb] p-3 flex items-center gap-3" href="#shop"><div class="text-sm font-semibold">Floral motifs</div><img class="w-24 h-24 rounded-2xl object-cover" src="https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=400&q=80" alt="Floral inspiration"></a>
+  <a class="card bg-[#f0f1eb] p-3 flex items-center gap-3" href="#shop"><div class="text-sm font-semibold">Bridal edit</div><img class="w-24 h-24 rounded-2xl object-cover" src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80" alt="Bridal fabric inspiration"></a>
+  <a class="card bg-[#f0f1eb] p-3 flex items-center gap-3" href="#shop"><div class="text-sm font-semibold">Neckline designs</div><img class="w-24 h-24 rounded-2xl object-cover" src="https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=400&q=80" alt="Textile detail"></a>
+  <a class="card bg-[#f0f1eb] p-3 flex items-center gap-3" href="#shop"><div class="text-sm font-semibold">Statement patches</div><img class="w-24 h-24 rounded-2xl object-cover" src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=400&q=80" alt="Craft detail"></a>
+ </div>
+</section>
+
+<section id="shop" class="mt-16 md:mt-20 bg-[#111210] text-white py-12 md:py-16">
+ <div class="wrap">
+  <div class="flex items-end justify-between mb-7"><div><p class="text-xs uppercase tracking-[.2em] text-stone-400">Limited-time edit</p><h2 class="text-3xl font-bold mt-2">Daily deals</h2></div><a href="#" class="text-sm">View all offers ↗</a></div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+   <article class="product-card rounded-[24px] overflow-hidden bg-[#f4efcf] text-black"><div class="product-img"><img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=600&q=80" alt="Embroidered patch product"></div><div class="p-4"><div class="text-xs muted">Floral collection</div><h3 class="font-bold mt-1">Bloom Patch Set</h3><div class="mt-3 flex items-center gap-2"><b>Rs. 590</b><del class="text-xs muted">Rs. 750</del></div><button class="btn btn-dark w-full mt-3" onclick="toast('Demo: added to cart')">Add to cart +</button></div></article>
+   <article class="product-card rounded-[24px] overflow-hidden bg-[#f3dce9] text-black"><div class="product-img"><img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=600&q=80" alt="Fashion textile product"></div><div class="p-4"><div class="text-xs muted">Bridal edit</div><h3 class="font-bold mt-1">Pearl Motif Pair</h3><div class="mt-3 flex items-center gap-2"><b>Rs. 1,250</b><del class="text-xs muted">Rs. 1,500</del></div><button class="btn btn-dark w-full mt-3" onclick="toast('Demo: added to cart')">Add to cart +</button></div></article>
+   <article class="product-card rounded-[24px] overflow-hidden bg-[#e3e9dc] text-black"><div class="product-img"><img src="https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=600&q=80" alt="Textile embroidery detail"></div><div class="p-4"><div class="text-xs muted">Statement pieces</div><h3 class="font-bold mt-1">Heritage Motif</h3><div class="mt-3 flex items-center gap-2"><b>Rs. 890</b><del class="text-xs muted">Rs. 1,100</del></div><button class="btn btn-dark w-full mt-3" onclick="toast('Demo: added to cart')">Add to cart +</button></div></article>
+   <article class="product-card rounded-[24px] overflow-hidden bg-[#f6dfd1] text-black"><div class="product-img"><img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80" alt="Decorative textile patch"></div><div class="p-4"><div class="text-xs muted">Everyday details</div><h3 class="font-bold mt-1">Classic Patch Trio</h3><div class="mt-3 flex items-center gap-2"><b>Rs. 720</b><del class="text-xs muted">Rs. 900</del></div><button class="btn btn-dark w-full mt-3" onclick="toast('Demo: added to cart')">Add to cart +</button></div></article>
+  </div>
+ </div>
+</section>
+
+<section id="about" class="wrap py-16 md:py-20">
+ <div class="panel soft overflow-hidden grid md:grid-cols-2">
+  <div class="p-8 md:p-14 flex flex-col justify-center"><p class="text-xs uppercase tracking-[.2em] muted">Made for the details</p><h2 class="text-4xl md:text-5xl font-bold mt-4">A little detail. A whole new look.</h2><p class="mt-5 text-stone-700 max-w-md">Explore expressive embroidery accents, considered finishes and collections designed to make every piece feel personal.</p><a class="btn btn-light mt-7 w-fit" href="#collections">Discover our approach →</a></div>
+  <div class="min-h-[300px]"><img class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=1100&q=85" alt="Creative textile and craft workspace"></div>
+ </div>
+</section>
+
+<section id="collections" class="wrap pb-16">
+ <div class="flex justify-between items-end mb-6"><div><p class="text-xs uppercase tracking-[.2em] muted">Curated for you</p><h2 class="text-3xl font-bold mt-2">New arrivals & collections</h2></div><a class="text-sm font-semibold" href="#shop">Shop all ↗</a></div>
+ <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div><img class="rounded-[22px] w-full aspect-[4/5] object-cover" src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=500&q=80" alt="Textile collection"><p class="font-semibold mt-3">New motifs</p></div>
+  <div><img class="rounded-[22px] w-full aspect-[4/5] object-cover" src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=500&q=80" alt="Decorative detail"><p class="font-semibold mt-3">Bridal stories</p></div>
+  <div><img class="rounded-[22px] w-full aspect-[4/5] object-cover" src="https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=500&q=80" alt="Fashion details"><p class="font-semibold mt-3">Everyday accents</p></div>
+  <div><img class="rounded-[22px] w-full aspect-[4/5] object-cover" src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=500&q=80" alt="Collection inspiration"><p class="font-semibold mt-3">The statement edit</p></div>
+ </div>
+</section>
+
+<section class="overflow-hidden py-4 border-y border-stone-100"><div class="whitespace-nowrap text-4xl md:text-6xl font-semibold tracking-tight text-center">DETAILS MAKE THE DESIGN　↗　DETAILS MAKE THE DESIGN　↗</div></section>
+<section class="wrap py-16">
+ <div class="panel relative overflow-hidden min-h-[360px] md:min-h-[470px] text-white flex items-end">
+  <img class="absolute inset-0 w-full h-full object-cover" src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=85" alt="Editorial fashion campaign">
+  <div class="absolute inset-0 bg-black/45"></div>
+  <div class="relative p-8 md:p-14 max-w-2xl"><p class="text-xs tracking-[.2em] uppercase">The next detail is yours</p><h2 class="text-4xl md:text-6xl font-bold mt-4">Find the finish that feels like you.</h2><p class="mt-4 text-white/80">Sign up for new drops, collection stories and selected offers.</p><div class="mt-6 flex flex-wrap gap-2"><input class="rounded-full px-5 py-3 text-black text-sm w-64" placeholder="Your email address"><button class="btn bg-white text-black" onclick="toast('Demo: newsletter signup')">Join the list ↗</button></div></div>
+ </div>
+</section>
+<footer class="bg-[#111210] text-white py-12"><div class="wrap grid md:grid-cols-4 gap-8"><div><div class="text-2xl font-extrabold display">thread&motif</div><p class="text-sm text-stone-400 mt-3 max-w-xs">Embroidery details for pieces worth remembering.</p></div><div><b class="text-sm">Shop</b><p class="text-sm text-stone-400 mt-3 leading-8">All products<br>New arrivals<br>Collections<br>Daily deals</p></div><div><b class="text-sm">Help</b><p class="text-sm text-stone-400 mt-3 leading-8">Contact<br>Shipping information<br>Returns & refunds<br>FAQs</p></div><div><b class="text-sm">Stay in touch</b><p class="text-sm text-stone-400 mt-3">Questions about an order or a design? We would love to help.</p><p class="text-sm mt-4">Instagram · Facebook · WhatsApp</p></div></div><div class="wrap border-t border-white/15 mt-10 pt-5 text-xs text-stone-500 flex justify-between"><span>© 2026 Thread & Motif — preview brand</span><span>Privacy · Terms</span></div></footer>
+</main>
+
+<main id="adminView" class="hide">
+<div class="admin-shell">
+ <aside class="sidebar">
+  <div class="font-extrabold text-xl display px-3 mb-8">thread<span class="text-lime-700">&</span>motif <span class="text-[10px] muted font-normal">ADMIN</span></div>
+  <div class="text-[10px] uppercase tracking-widest muted px-3 mb-2">Workspace</div>
+  <a class="side-link active" href="#adminDash">▦ Overview</a><a class="side-link" href="#adminProducts">◇ Products</a><a class="side-link" href="#adminProducts">▤ Categories & collections</a><a class="side-link" href="#adminInventory">▥ Inventory</a><a class="side-link" href="#adminOrders">▣ Orders</a><a class="side-link" href="#adminOrders">◈ Payments</a><a class="side-link" href="#adminOrders">↗ Shipping</a><a class="side-link" href="#adminProducts">％ Promotions</a><a class="side-link" href="#adminOrders">♙ Customers</a>
+  <div class="text-[10px] uppercase tracking-widest muted px-3 mt-7 mb-2">Website</div><a class="side-link" href="#adminContent">▧ Homepage & banners</a><a class="side-link" href="#adminContent">▤ Pages & menus</a><a class="side-link" href="#adminContent">⌁ Reports</a>
+  <div class="text-[10px] uppercase tracking-widest muted px-3 mt-7 mb-2">Administration</div><a class="side-link" href="#adminSettings">♧ Team & permissions</a><a class="side-link" href="#adminSettings">⚙ Settings</a><a class="side-link" href="#adminSettings">◷ Activity log</a>
+ </aside>
+ <section class="admin-content">
+  <div class="flex justify-between items-center mb-8"><div><p class="text-xs muted">Monday, 16 November 2026</p><h1 class="text-3xl font-bold mt-1">Good afternoon, Admin</h1><p class="text-sm muted mt-1">Here is what is happening in your store.</p></div><button class="btn btn-dark" onclick="toast('Demo: create product')">＋ Add product</button></div>
+  <div id="adminDash" class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+   <div class="kpi"><p class="text-xs muted">Sales this month</p><p class="text-2xl font-bold mt-2">Rs. 284,500</p><p class="text-xs text-green-700 mt-2">↑ 12.8% vs last month</p></div>
+   <div class="kpi"><p class="text-xs muted">Orders</p><p class="text-2xl font-bold mt-2">186</p><p class="text-xs muted mt-2">Across all channels</p></div>
+   <div class="kpi"><p class="text-xs muted">Pending confirmation</p><p class="text-2xl font-bold mt-2">12</p><p class="text-xs text-amber-700 mt-2">Needs attention</p></div>
+   <div class="kpi"><p class="text-xs muted">Low stock items</p><p class="text-2xl font-bold mt-2">8</p><p class="text-xs muted mt-2">Across 5 products</p></div>
+  </div>
+  <div class="grid xl:grid-cols-3 gap-4 mb-6">
+   <div class="kpi xl:col-span-2"><div class="flex justify-between"><div><b>Sales overview</b><p class="text-xs muted mt-1">Illustrative sample data · PKR</p></div><select class="border rounded-full px-3 py-2 text-xs"><option>Last 30 days</option><option>This month</option></select></div><div class="h-48 flex items-end gap-3 mt-5 px-2 border-b border-lime-100"><div class="bg-[#dfe5c5] rounded-t-lg flex-1" style="height:35%"></div><div class="bg-[#dfe5c5] rounded-t-lg flex-1" style="height:48%"></div><div class="bg-[#dfe5c5] rounded-t-lg flex-1" style="height:42%"></div><div class="bg-[#c7d84a] rounded-t-lg flex-1" style="height:66%"></div><div class="bg-[#dfe5c5] rounded-t-lg flex-1" style="height:57%"></div><div class="bg-[#c7d84a] rounded-t-lg flex-1" style="height:82%"></div><div class="bg-[#dfe5c5] rounded-t-lg flex-1" style="height:72%"></div><div class="bg-[#c7d84a] rounded-t-lg flex-1" style="height:95%"></div></div><div class="flex justify-between text-[10px] muted mt-2"><span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span></div></div>
+   <div class="kpi"><b>Order status</b><div class="mt-5 space-y-4 text-sm"><div><div class="flex justify-between"><span>Pending</span><b>12</b></div><div class="h-2 rounded-full bg-stone-100 mt-2"><div class="h-2 rounded-full bg-amber-400 w-[30%]"></div></div></div><div><div class="flex justify-between"><span>Processing</span><b>28</b></div><div class="h-2 rounded-full bg-stone-100 mt-2"><div class="h-2 rounded-full bg-indigo-400 w-[55%]"></div></div></div><div><div class="flex justify-between"><span>Dispatched</span><b>41</b></div><div class="h-2 rounded-full bg-stone-100 mt-2"><div class="h-2 rounded-full bg-lime-500 w-[78%]"></div></div></div></div></div>
+  </div>
+  <div id="adminOrders" class="kpi mb-6 !p-0"><div class="p-5 flex justify-between items-center"><div><b>Recent orders</b><p class="text-xs muted mt-1">Review, confirm and fulfil customer orders.</p></div><button class="btn btn-light">View all orders ↗</button></div><div class="table-wrap !border-0 !rounded-none"><table><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead><tbody><tr><td class="font-bold">#TM-1048</td><td>Ayesha Khan</td><td>16 Nov 2026</td><td>Rs. 3,250</td><td>COD</td><td><span class="badge orange">Pending</span></td></tr><tr><td class="font-bold">#TM-1047</td><td>Sarah Ahmed</td><td>16 Nov 2026</td><td>Rs. 5,800</td><td>Bank transfer</td><td><span class="badge green">Paid</span></td></tr><tr><td class="font-bold">#TM-1046</td><td>Maryam Ali</td><td>15 Nov 2026</td><td>Rs. 1,950</td><td>COD</td><td><span class="badge">Processing</span></td></tr><tr><td class="font-bold">#TM-1045</td><td>Hiba Noor</td><td>15 Nov 2026</td><td>Rs. 2,450</td><td>Bank transfer</td><td><span class="badge green">Dispatched</span></td></tr></tbody></table></div></div>
+  <div class="grid lg:grid-cols-2 gap-4">
+   <div id="adminInventory" class="kpi"><div class="flex justify-between"><b>Inventory alerts</b><a class="text-xs font-semibold">View inventory ↗</a></div><div class="mt-4 space-y-3 text-sm"><div class="flex justify-between border-b pb-3"><span>Floral Bloom Motif · Medium</span><span class="badge red">3 left</span></div><div class="flex justify-between border-b pb-3"><span>Bridal Pearl Patch · Large</span><span class="badge orange">5 left</span></div><div class="flex justify-between"><span>Heritage Motif Set · Small</span><span class="badge orange">7 left</span></div></div></div>
+   <div id="adminProducts" class="kpi"><div class="flex justify-between"><b>Quick actions</b><span class="text-xs muted">Common tasks</span></div><div class="grid grid-cols-2 gap-2 mt-4"><button class="btn btn-light" onclick="toast('Demo: add product')">＋ New product</button><button class="btn btn-light" onclick="toast('Demo: create offer')">％ Create offer</button><button class="btn btn-light" onclick="toast('Demo: stock adjustment')">＋ Adjust stock</button><button class="btn btn-light" onclick="toast('Demo: print orders')">▤ Print orders</button></div></div>
+  </div>
+  <div id="adminContent" class="kpi mt-4"><b>Homepage content controls</b><p class="text-xs muted mt-1">The real admin will let authorized staff edit announcement text, hero banners, section order, visibility, collection links and campaign images.</p><div class="flex flex-wrap gap-2 mt-4"><span class="badge green">Announcement active</span><span class="badge">Hero banner published</span><span class="badge">Daily deals visible</span><span class="badge">New arrivals visible</span></div></div>
+  <div id="adminSettings" class="kpi mt-4"><b>Store configuration preview</b><div class="grid md:grid-cols-3 gap-3 mt-4 text-sm"><div class="bg-stone-50 rounded-xl p-3"><span class="muted text-xs">Checkout mode</span><p class="font-semibold mt-1">Guest + account / required</p></div><div class="bg-stone-50 rounded-xl p-3"><span class="muted text-xs">Inventory modes</span><p class="font-semibold mt-1">Product / variant / made-to-order</p></div><div class="bg-stone-50 rounded-xl p-3"><span class="muted text-xs">Payments enabled</span><p class="font-semibold mt-1">COD / bank transfer</p></div></div></div>
+ </section>
+</div>
+</main>
+<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-black text-white text-sm px-5 py-3 rounded-full opacity-0 pointer-events-none transition z-[100]">Demo action</div>
+<script>
+function showView(which){
+ const store=document.getElementById('storeView'), admin=document.getElementById('adminView');
+ const st=document.getElementById('storeTab'), at=document.getElementById('adminTab');
+ if(which==='admin'){store.classList.add('hide');admin.classList.remove('hide');at.className='rounded-full bg-black text-white px-4 py-2';st.className='rounded-full px-4 py-2';window.scrollTo(0,0)}
+ else{admin.classList.add('hide');store.classList.remove('hide');st.className='rounded-full bg-black text-white px-4 py-2';at.className='rounded-full px-4 py-2';window.scrollTo(0,0)}
+}
+let toastTimer;function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity='0',2200)}
+</script>
+</body></html>

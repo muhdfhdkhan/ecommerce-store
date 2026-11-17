@@ -1,0 +1,24 @@
+# Patches&Motifs — public/.htaccess (SECURITY.md §27.2)
+Options -Indexes -MultiViews
+ServerSignature Off
+
+<IfModule mod_headers.c>
+    # Block access to dotfiles such as .env, .git
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Deny sensitive extensions anywhere under public/
+<FilesMatch "\.(env|ini|log|sql|bak|old|orig|swp|zip|tar|gz|7z|git|yml|yaml|lock|md|json)$">
+    Require all denied
+</FilesMatch>
+
+# Only PHP execution via the front controller
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Local XAMPP has no TLS; HTTPS redirect enabled in production config.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>

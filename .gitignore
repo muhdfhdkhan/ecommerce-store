@@ -1,0 +1,18 @@
+# Secrets & local environment (SECURITY.md §3.2)
+.env
+
+# Dependencies
+node_modules/
+vendor/
+
+# Runtime storage
+storage/logs/*
+storage/cache/*
+storage/private/*
+!storage/logs/.gitkeep
+!storage/cache/.gitkeep
+!storage/private/.gitkeep
+
+# OS / editor
+Thumbs.db
+.DS_Store
