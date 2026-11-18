@@ -38,3 +38,16 @@ backdrop?.addEventListener('click', () => setDrawer(false));
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') setDrawer(false);
 });
+
+// Purchase order: clone the first line row for quick multi-line entry.
+const poLines = document.getElementById('po-lines');
+const poAddBtn = document.getElementById('po-add-line');
+if (poLines && poAddBtn) {
+  poAddBtn.addEventListener('click', () => {
+    const first = poLines.firstElementChild;
+    if (!first) return;
+    const clone = first.cloneNode(true);
+    for (const el of clone.querySelectorAll('input, select')) el.value = '';
+    poLines.appendChild(clone);
+  });
+}

@@ -44,6 +44,15 @@ $routes = [
     '/admin/reports'       => ['admin/reports.php',    'private'],
     '/admin/settings'      => ['admin/settings.php',   'private'],
     '/admin/shipping'      => ['admin/shipping.php',   'private'],
+    // Phase 6 — business management
+    '/admin/analytics'     => ['admin/analytics.php',  'private'],
+    '/admin/promotions'    => ['admin/promotions.php', 'private'],
+    '/admin/suppliers'     => ['admin/suppliers.php',  'private'],
+    '/admin/purchasing'    => ['admin/purchasing.php', 'private'],
+    // Phase 7 — website management
+    '/admin/banners'       => ['admin/banners.php',    'private'],
+    '/admin/cms'           => ['admin/cms.php',        'private'],
+    '/admin/seo'           => ['admin/seo.php',        'private'],
 ];
 
 $route = $routes[$path] ?? null;

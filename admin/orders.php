@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once BASE_PATH . '/includes/admin_guard.php';
+require_once BASE_PATH . '/includes/mailer.php';
 require_once BASE_PATH . '/modules/inventory/service.php';
 
 $ALLOWED_TRANSITIONS = [
@@ -72,6 +73,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
                 $pdo->commit();
                 audit('order_status_changed', 'order', $orderId, ['status' => $from], ['status' => $to]);
+                // Best-effort customer notification (SECURITY.md §3.3: never break the flow).
+                try {
+                    mailer_order_status((string)$order['email'], (string)$order['order_number'], $orderId, $to);
+                } catch (Throwable $e) {
+                    app_log('error', 'order status email failed: ' . $e->getMessage());
+                }
                 $_SESSION['flash_success'] = "Order marked $to.";
             } catch (Throwable $e) {
                 $pdo->rollBack();
@@ -119,6 +126,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $hist->execute([':o' => $orderId, ':u' => (int)$ADMIN['id'], ':o2' => $orderId]);
                 $pdo->commit();
                 audit('order_dispatched', 'order', $orderId, null, ['courier' => $courier, 'tracking' => $tracking]);
+                try {
+                    mailer_order_status((string)$order['email'], (string)$order['order_number'], $orderId, 'dispatched');
+                } catch (Throwable $e) {
+                    app_log('error', 'order dispatch email failed: ' . $e->getMessage());
+                }
                 $_SESSION['flash_success'] = 'Order dispatched.';
             } catch (Throwable $e) {
                 $pdo->rollBack();

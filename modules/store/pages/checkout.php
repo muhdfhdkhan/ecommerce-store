@@ -14,10 +14,29 @@ if (empty($cart['items'])) {
 $errors = [];
 $placed = null;
 
+// Coupon preview: session stores the validated code so the summary can show it.
+$appliedCoupon = null;
+$discountCents = 0;
+
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_verify();
     require_once BASE_PATH . '/modules/orders/service.php';
 
+    // "Apply coupon" posts only that field — validate, remember, redisplay.
+    if (($_POST['apply_coupon'] ?? '') === '1') {
+        $code = strtoupper(trim(mb_substr((string)($_POST['coupon_code'] ?? ''), 0, 32)));
+        try {
+            [, $discountCents] = coupon_validate($code !== '' ? $code : null, $cart['subtotal_cents']);
+            if ($code !== '') {
+                $_SESSION['applied_coupon'] = $code;
+            } else {
+                unset($_SESSION['applied_coupon']);
+            }
+        } catch (RuntimeException $e) {
+            $errors['coupon'] = $e->getMessage();
+            unset($_SESSION['applied_coupon']);
+        }
+    } else {
     $idem = (string)($_POST['idempotency_key'] ?? '');
     if (!preg_match('/^[a-f0-9]{32}$/', $idem)) {
         // Tampered or expired key: reject safely.
@@ -49,6 +68,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $errors['form'] = is_string($result) ? $result : 'Could not place the order.';
         }
     }
+    }
 }
 
 if ($placed !== null) {
@@ -74,10 +94,21 @@ if ($placed !== null) {
 
 $subtotal = $cart['subtotal_cents'];
 $shipping = $subtotal >= 500000 ? 0 : 25000;
-$total = $subtotal + $shipping;
+$appliedCoupon = $_SESSION['applied_coupon'] ?? null;
+if ($appliedCoupon) {
+    try {
+        require_once BASE_PATH . '/modules/orders/service.php';
+        [, $discountCents] = coupon_validate($appliedCoupon, $subtotal);
+    } catch (RuntimeException) {
+        unset($_SESSION['applied_coupon']);
+        $appliedCoupon = null;
+        $discountCents = 0;
+    }
+}
+$total = max(0, $subtotal + $shipping - $discountCents);
 $idem = bin2hex(random_bytes(16));
 
-store_layout('Checkout', function () use ($cart, $subtotal, $shipping, $total, $idem, $errors) { ?>
+store_layout('Checkout', function () use ($cart, $subtotal, $shipping, $total, $idem, $errors, $appliedCoupon, $discountCents) { ?>
 <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:py-12">
     <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Checkout</h1>
 
@@ -168,8 +199,23 @@ store_layout('Checkout', function () use ($cart, $subtotal, $shipping, $total, $
                 <dl class="mt-4 space-y-2 border-t border-line pt-4 text-sm">
                     <div class="flex justify-between"><dt class="text-muted-ink">Subtotal</dt><dd class="tabular-nums"><?= money_fmt($subtotal) ?></dd></div>
                     <div class="flex justify-between"><dt class="text-muted-ink">Shipping</dt><dd class="tabular-nums"><?= $shipping === 0 ? 'Free' : money_fmt($shipping) ?></dd></div>
+                    <?php if ($appliedCoupon): ?>
+                    <div class="flex justify-between text-success"><dt>Discount (<?= e($appliedCoupon) ?>)</dt><dd class="tabular-nums">&minus;<?= money_fmt($discountCents) ?></dd></div>
+                    <?php endif; ?>
                     <div class="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>Total</dt><dd class="tabular-nums"><?= money_fmt($total) ?></dd></div>
                 </dl>
+
+                <!-- Coupon -->
+                <?php if (isset($errors['coupon'])): ?>
+                    <p role="alert" class="mt-3 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger"><?= e($errors['coupon']) ?></p>
+                <?php endif; ?>
+                <div class="mt-4 flex gap-2 border-t border-line pt-4">
+                    <label class="sr-only" for="coupon_code">Coupon code</label>
+                    <input id="coupon_code" name="coupon_code" maxlength="32" placeholder="Coupon code" value="<?= e($appliedCoupon ?? '') ?>"
+                           class="h-11 w-full rounded-xl border border-line bg-canvas/60 px-3 text-sm uppercase">
+                    <button type="submit" name="apply_coupon" value="1" class="h-11 shrink-0 rounded-xl border border-line px-4 text-sm font-semibold hover:bg-canvas">Apply</button>
+                </div>
+
                 <button type="submit" class="mt-5 inline-flex h-12 w-full items-center justify-center rounded-full bg-ink text-base font-semibold text-white hover:bg-ink/90">Place order</button>
                 <p class="mt-3 text-center text-xs text-muted-ink">By placing the order you agree to our terms and return policy.</p>
             </div>

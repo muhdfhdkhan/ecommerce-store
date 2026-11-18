@@ -86,7 +86,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
                                 <?php
                                 $effV = ($v['sale_price'] !== null && (float)$v['sale_price'] < (float)$v['price']) ? (float)$v['sale_price'] : (float)$v['price'];
                                 $out  = !$mto && ($v['available'] === null || (int)$v['available'] < 1);
-                                $label = trim(($v['size_label'] ?? '') . ' ' . ($v['color_label'] ?? '')) ?: (string)$v['sku'];
+                                $label = variant_label((string)$v['sku'], $v['size_label'] ?? null, $v['length_label'] ?? null, $v['color_label'] ?? null);
                                 ?>
                                 <label class="variant-chip inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition
                                     <?= $out ? 'cursor-not-allowed border-line bg-canvas text-muted-ink line-through' : 'border-line bg-surface hover:border-ink' ?>">
@@ -143,4 +143,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
     'sku' => (string)$v['sku'],
     'price' => (float)(($v['sale_price'] !== null && (float)$v['sale_price'] < (float)$v['price']) ? $v['sale_price'] : $v['price']),
 ], $variants)) ?></script>
-<?php }, ['meta_description' => (string)($product['short_description'] ?: $product['name'])]);
+<?php }, [
+    'meta_title' => $product['meta_title'] ?: null,
+    'meta_description' => $product['meta_description'] ?: (string)($product['short_description'] ?: $product['name']),
+]);

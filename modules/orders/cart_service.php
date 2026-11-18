@@ -73,7 +73,7 @@ function cart_view(): array
 
     $st = db()->prepare(
         'SELECT ci.id AS cart_item_id, ci.quantity,
-                v.id AS variant_id, v.sku, v.size_label, v.color_label,
+                v.id AS variant_id, v.sku, v.size_label, v.length_label, v.color_label,
                 p.id AS product_id, p.name AS product_name, p.slug, p.made_to_order,
                 v.price, v.sale_price,
                 (inv.quantity_on_hand - inv.quantity_reserved) AS available
@@ -104,7 +104,9 @@ function cart_view(): array
             'slug'           => (string)$row['slug'],
             'sku'            => (string)$row['sku'],
             'size_label'     => $row['size_label'],
+            'length_label'   => $row['length_label'],
             'color_label'    => $row['color_label'],
+            'variant_label'  => variant_label((string)$row['sku'], $row['size_label'], $row['length_label'], $row['color_label']),
             'quantity'       => (int)$row['quantity'],
             'available'      => $row['available'] === null ? null : (int)$row['available'],
             'unit_price_cents' => $unit,

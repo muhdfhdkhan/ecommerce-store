@@ -103,4 +103,7 @@ store_layout($q !== '' ? "Search: $q" : 'Shop', function () use ($result, $categ
         <?php endif; ?>
     <?php endif; ?>
 </div>
-<?php }, ['meta_description' => 'Browse embroidery patches and motifs.']);
+<?php }, [
+    'meta_title' => 'Shop patches & motifs',
+    'meta_description' => 'Browse embroidered patches, motifs and made-to-order labels.',
+]);

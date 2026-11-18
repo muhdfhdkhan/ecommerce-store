@@ -5,6 +5,7 @@ declare(strict_types=1);
 define('BASE_PATH', dirname(__DIR__));
 define('STORAGE_PATH', BASE_PATH . '/storage');
 define('CONFIG_PATH', BASE_PATH . '/config');
+define('PUBLIC_PATH', BASE_PATH . '/public');
 
 error_reporting(E_ALL);
 ini_set('display_errors', '0');          // never show errors to visitors
@@ -37,6 +38,7 @@ require BASE_PATH . '/includes/csrf.php';
 require BASE_PATH . '/includes/database.php';
 require BASE_PATH . '/includes/ratelimit.php';
 require BASE_PATH . '/includes/auth.php';
+require BASE_PATH . '/includes/uploads.php';
 
 start_secure_session();
 

@@ -33,7 +33,7 @@ store_layout('Cart', function () use ($cart) { ?>
     <?php else: ?>
         <ul class="mt-8 space-y-4" id="cart-lines">
             <?php foreach ($cart['items'] as $item):
-                $label = trim(($item['size_label'] ?? '') . ' ' . ($item['color_label'] ?? '')); ?>
+                $label = $item['variant_label'] ?? trim(($item['size_label'] ?? '') . ' ' . ($item['color_label'] ?? '')); ?>
             <li class="flex gap-4 rounded-3xl border border-line bg-surface p-4" data-line-id="<?= (int)$item['cart_item_id'] ?>">
                 <div class="h-20 w-20 shrink-0 rounded-2xl bg-stone-soft"></div>
                 <div class="min-w-0 flex-1">

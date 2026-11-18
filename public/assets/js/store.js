@@ -79,3 +79,33 @@ document.querySelector('[data-store-menu-open]')?.addEventListener('click', () =
 document.querySelector('[data-store-menu-close]')?.addEventListener('click', () => setMenu(false));
 menuBackdrop?.addEventListener('click', () => setMenu(false));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
+
+// Hero slider: auto-advance + dots. Disabled under prefers-reduced-motion.
+const hero = document.querySelector('[data-hero]');
+if (hero && hero.querySelectorAll('[data-hero-slide]').length > 1) {
+  const slides = Array.from(hero.querySelectorAll('[data-hero-slide]'));
+  const dots = Array.from(hero.querySelectorAll('[data-hero-dot]'));
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let current = 0;
+  let timer = null;
+
+  function show(idx) {
+    current = idx % slides.length;
+    slides.forEach((el, i) => el.classList.toggle('hidden', i !== current));
+    dots.forEach((el, i) => {
+      el.classList.toggle('bg-ink', i === current);
+      el.classList.toggle('bg-ink/25', i !== current);
+    });
+  }
+  function play() {
+    if (reduced) return;
+    timer = window.setInterval(() => show(current + 1), 6000);
+  }
+  function stop() { if (timer) { window.clearInterval(timer); timer = null; } }
+
+  dots.forEach((dot, i) => dot.addEventListener('click', () => { stop(); show(i); play(); }));
+  hero.addEventListener('mouseenter', stop);
+  hero.addEventListener('mouseleave', () => { stop(); play(); });
+  document.addEventListener('visibilitychange', () => (document.hidden ? stop() : play()));
+  play();
+}

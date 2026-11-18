@@ -92,7 +92,7 @@ function product_find_by_slug(string $slug): ?array
     $product['images'] = $ist->fetchAll();
 
     $vst = db()->prepare(
-        'SELECT v.id, v.sku, v.size_label, v.color_label, v.price, v.sale_price,
+        'SELECT v.id, v.sku, v.size_label, v.length_label, v.color_label, v.price, v.sale_price,
                 (inv.quantity_on_hand - inv.quantity_reserved) AS available
          FROM product_variants v
          LEFT JOIN inventory inv ON inv.variant_id = v.id

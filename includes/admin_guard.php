@@ -18,10 +18,12 @@ function role_permissions_for(string $role): array
         'store_manager'  => ['dashboard.view', 'products.view', 'products.edit', 'categories.view', 'categories.edit',
                             'collections.view', 'collections.edit', 'inventory.view', 'inventory.adjust',
                             'orders.view', 'orders.update_status', 'payments.view', 'customers.view', 'customers.edit',
-                            'customers.block', 'reports.view', 'logs.view'],
+                            'customers.block', 'reports.view', 'logs.view', 'promotions.manage',
+                            'suppliers.manage', 'purchasing.manage', 'cms.manage', 'seo.manage'],
         'order_manager'  => ['dashboard.view', 'orders.view', 'orders.update_status', 'payments.view', 'shipping.manage'],
         'product_manager'=> ['dashboard.view', 'products.view', 'products.edit', 'categories.view', 'categories.edit',
-                            'collections.view', 'collections.edit', 'inventory.view'],
+                            'collections.view', 'collections.edit', 'inventory.view', 'inventory.adjust',
+                            'suppliers.manage', 'purchasing.manage'],
         'accountant'     => ['dashboard.view', 'payments.view', 'payments.verify', 'orders.view', 'reports.view', 'reports.export'],
         default          => ['dashboard.view'],
     };
@@ -117,6 +119,7 @@ function admin_layout(string $title, callable $content): void
     <aside data-drawer class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full border-r border-line bg-surface p-4 transition-transform duration-200 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:w-60 lg:shrink-0 lg:translate-x-0 lg:rounded-2xl lg:border">
         <nav aria-label="Admin navigation" class="space-y-1">
             <a href="/admin/dashboard" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition hover:bg-canvas">Overview</a>
+            <a href="/admin/analytics" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Analytics</a>
             <p class="px-3 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Catalog</p>
             <a href="/admin/products" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Products</a>
             <a href="/admin/categories" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Categories</a>
@@ -126,8 +129,15 @@ function admin_layout(string $title, callable $content): void
             <a href="/admin/inventory" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Inventory</a>
             <a href="/admin/customers" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Customers</a>
             <p class="px-3 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Business</p>
+            <a href="/admin/promotions" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Promotions</a>
+            <a href="/admin/suppliers" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Suppliers</a>
+            <a href="/admin/purchasing" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Purchasing</a>
             <a href="/admin/payments" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Payments</a>
             <a href="/admin/reports" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Reports</a>
+            <p class="px-3 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Website</p>
+            <a href="/admin/banners" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Banners</a>
+            <a href="/admin/cms" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">CMS pages</a>
+            <a href="/admin/seo" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">SEO</a>
             <a href="/admin/settings" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Settings</a>
         </nav>
     </aside>
@@ -224,13 +234,70 @@ function admin_product_form(?array $p, array $variants, array $cats, bool $canEd
     </section>
 
     <?php if ($id): ?>
+    <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6" id="images-section">
+        <h2 class="font-bold">Images</h2>
+        <?php $imgs = product_images_all((int)$id); ?>
+        <?php if ($imgs): ?>
+        <div class="mt-4 flex flex-wrap gap-4">
+            <?php foreach ($imgs as $im): ?>
+            <div class="w-36">
+                <div class="aspect-square overflow-hidden rounded-2xl border border-line bg-stone-soft">
+                    <img src="/uploads/<?= e($im['file_path']) ?>" alt="<?= e($im['alt_text'] ?: $p['name'] ?? 'Product image') ?>" loading="lazy" class="h-full w-full object-cover">
+                </div>
+                <?php if ($canEdit): ?>
+                <div class="mt-2 flex items-center gap-2">
+                    <?php if ($im['is_primary']): ?>
+                        <span class="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">Primary</span>
+                    <?php else: ?>
+                        <form method="post" action="/admin/products?action=edit&id=<?= (int)$id ?>">
+                            <input type="hidden" name="do" value="primary_image">
+                            <input type="hidden" name="image_id" value="<?= (int)$im['id'] ?>">
+                            <?= csrf_field() ?>
+                            <button class="text-xs font-semibold underline-offset-2 hover:underline">Make primary</button>
+                        </form>
+                    <?php endif; ?>
+                    <form method="post" action="/admin/products?action=edit&id=<?= (int)$id ?>" class="ml-auto">
+                        <input type="hidden" name="do" value="delete_image">
+                        <input type="hidden" name="image_id" value="<?= (int)$im['id'] ?>">
+                        <?= csrf_field() ?>
+                        <button class="text-xs font-semibold text-danger hover:underline">Remove</button>
+                    </form>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+            <p class="mt-3 text-sm text-muted-ink">No images yet.</p>
+        <?php endif; ?>
+        <?php if ($canEdit): ?>
+        <form method="post" action="/admin/products?action=edit&id=<?= (int)$id ?>" enctype="multipart/form-data" class="mt-5 rounded-xl border border-line bg-canvas/40 p-4">
+            <input type="hidden" name="do" value="upload_images">
+            <?= csrf_field() ?>
+            <p class="text-sm font-semibold">Add images</p>
+            <p class="text-xs text-muted-ink">JPG, PNG or WebP, up to 5 MB each, max 8 per upload. Images are re-processed server-side.</p>
+            <div class="mt-3 flex flex-wrap items-end gap-3">
+                <label class="block text-sm">Choose files (multiple allowed)
+                    <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required
+                           class="mt-1 block w-full max-w-xs rounded-xl border border-line bg-surface px-3 py-2 text-sm">
+                </label>
+                <label class="block text-sm">Alt text (accessibility)
+                    <input name="alt_text" maxlength="255" placeholder="<?= e($p['name'] ?? '') ?> patch"
+                           class="mt-1 block w-56 rounded-xl border border-line bg-surface px-3 py-2 text-sm">
+                </label>
+                <button class="inline-flex h-11 items-center rounded-xl bg-accent px-5 text-sm font-semibold text-white hover:bg-accent/90">Upload</button>
+            </div>
+        </form>
+        <?php endif; ?>
+    </section>
+
     <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
         <h2 class="font-bold">Variants</h2>
         <ul class="mt-4 space-y-3">
             <?php foreach ($variants as $v): ?>
             <li class="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3">
                 <span class="font-mono text-sm font-semibold"><?= e($v['sku']) ?></span>
-                <span class="text-sm text-muted-ink"><?= e(trim(($v['size_label'] ?? '') . ' ' . ($v['color_label'] ?? ''))) ?></span>
+                <span class="text-sm text-muted-ink"><?= e(variant_label((string)$v['sku'], $v['size_label'] ?? null, $v['length_label'] ?? null, $v['color_label'] ?? null)) ?></span>
                 <span class="ml-auto text-sm font-semibold tabular-nums"><?= money_fmt(money_to_cents((string)$v['price'])) ?></span>
                 <span class="rounded-full px-3 py-1 text-xs font-semibold tabular-nums <?= $canEdit && (int)$v['available'] <= (5) ? 'bg-warning/10 text-warning' : 'bg-canvas text-muted-ink' ?>">
                     <?= (int)$v['available'] ?> in stock
@@ -240,20 +307,43 @@ function admin_product_form(?array $p, array $variants, array $cats, bool $canEd
         </ul>
         <?php if ($canEdit): ?>
         <div class="mt-4 rounded-xl border border-line bg-canvas/40 p-4">
-            <p class="text-sm font-semibold">Add variant</p>
+            <p class="text-sm font-semibold">Add variant <span class="font-normal text-muted-ink">— size / length / color for patches &amp; motifs</span></p>
             <div class="mt-3 grid gap-3 sm:grid-cols-5">
                 <input name="variant_sku" placeholder="SKU" required maxlength="64" class="h-11 rounded-xl border border-line bg-surface px-3 font-mono text-sm uppercase sm:col-span-2">
-                <input name="size_label" placeholder="Size" maxlength="32" class="h-11 rounded-xl border border-line bg-surface px-3 text-sm">
+                <select name="size_label" class="h-11 rounded-xl border border-line bg-surface px-3 text-sm" aria-label="Size">
+                    <option value="">Size…</option>
+                    <optgroup label="Patch / motif size (inches)">
+                        <?php foreach (['1"', '1.5"', '2"', '3"', '4"', '5"', '6"', '8"', '10"'] as $s): ?>
+                            <option value="<?= e($s) ?>"><?= e($s) ?></option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                    <optgroup label="General">
+                        <?php foreach (['Small', 'Medium', 'Large', 'One size'] as $s): ?>
+                            <option value="<?= e($s) ?>"><?= e($s) ?></option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                </select>
+                <input name="length_label" placeholder="Length (e.g. 12 in border)" maxlength="32" list="length-presets"
+                       class="h-11 rounded-xl border border-line bg-surface px-3 text-sm">
+                <datalist id="length-presets">
+                    <?php foreach (['Border 12"', 'Border 9"', 'Border 6"', 'Full length', 'Custom'] as $l): ?>
+                        <option value="<?= e($l) ?>">
+                    <?php endforeach; ?>
+                </datalist>
                 <input name="color_label" placeholder="Color" maxlength="32" class="h-11 rounded-xl border border-line bg-surface px-3 text-sm">
-                <input name="variant_price" placeholder="Price" required inputmode="decimal" class="h-11 rounded-xl border border-line bg-surface px-3 text-sm tabular-nums">
             </div>
-            <div class="mt-3 flex items-end gap-3">
+            <div class="mt-3 flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-muted-ink">Price (PKR)</label>
+                    <input name="variant_price" placeholder="Price" required inputmode="decimal" class="h-11 w-32 rounded-xl border border-line bg-surface px-3 text-sm tabular-nums">
+                </div>
                 <div>
                     <label class="block text-xs font-semibold text-muted-ink">Initial stock</label>
                     <input name="variant_stock" type="number" min="0" max="1000000" value="0" class="h-11 w-28 rounded-xl border border-line bg-surface px-3 text-sm tabular-nums">
                 </div>
                 <button type="submit" name="do" value="add_variant" class="inline-flex h-11 items-center rounded-xl bg-accent px-5 text-sm font-semibold text-white hover:bg-accent/90">Add variant</button>
             </div>
+            <p class="mt-2 text-xs text-muted-ink">Leave size/length/color empty when not applicable — the storefront shows what you set.</p>
         </div>
         <?php endif; ?>
     </section>

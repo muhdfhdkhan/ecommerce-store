@@ -4,6 +4,46 @@
 declare(strict_types=1);
 
 require_once BASE_PATH . '/modules/inventory/service.php';
+require_once BASE_PATH . '/includes/mailer.php';
+
+/**
+ * Validate a coupon against the cart subtotal inside the placing transaction.
+ * Returns [code, discountCents] or [null, 0] when not applicable.
+ */
+function coupon_validate(?string $code, int $subtotalCents): array
+{
+    $code = strtoupper(trim(mb_substr((string)$code, 0, 32)));
+    if ($code === '') {
+        return [null, 0];
+    }
+    $st = db()->prepare(
+        'SELECT code, type, value, min_subtotal, usage_limit, used_count, starts_at, ends_at
+         FROM coupons WHERE code = :c AND is_active = 1 LIMIT 1'
+    );
+    $st->execute([':c' => $code]);
+    $c = $st->fetch();
+    if (!$c) {
+        throw new RuntimeException('That coupon code is not valid.');
+    }
+    $now = UTC_NOW();
+    if ($c['starts_at'] !== null && $now < $c['starts_at']) {
+        throw new RuntimeException('That coupon is not active yet.');
+    }
+    if ($c['ends_at'] !== null && $now > $c['ends_at']) {
+        throw new RuntimeException('That coupon has expired.');
+    }
+    if ($c['usage_limit'] !== null && (int)$c['used_count'] >= (int)$c['usage_limit']) {
+        throw new RuntimeException('That coupon has reached its usage limit.');
+    }
+    if ($subtotalCents < money_to_cents((string)$c['min_subtotal'])) {
+        throw new RuntimeException('Cart does not meet the coupon minimum.');
+    }
+    $discount = $c['type'] === 'percent'
+        ? (int)round($subtotalCents * ((float)$c['value'] / 100))
+        : money_to_cents((string)$c['value']);
+    $discount = min($discount, $subtotalCents);
+    return [(string)$c['code'], $discount];
+}
 
 /**
  * Place an order. All pricing/stock computed here from DB — client-supplied
@@ -57,7 +97,6 @@ function place_order(int $customerId, array $input, string $idempotencyKey): arr
         }
 
         // ---- Server-side re-verification of every line (SECURITY.md §12.3) ----
-        $discount = 0;
         $lines = [];
         foreach ($cart['items'] as $item) {
             $available = inventory_available($item['variant_id']);
@@ -67,9 +106,15 @@ function place_order(int $customerId, array $input, string $idempotencyKey): arr
             $lines[] = $item;
         }
 
+        // ---- Coupon validated inside the transaction, discount from DB only ----
+        [$couponCode, $discount] = coupon_validate(
+            ($input['coupon_code'] ?? null) !== null ? (string)$input['coupon_code'] : ($_SESSION['applied_coupon'] ?? null),
+            $subtotal
+        );
+
         // ---- Order number EMB-YYYY-NNNNNN under lock (PROJECT_BRIEF §13.2) ----
         $year = gmdate('Y');
-        $lock = $pdo->prepare('SELECT LPAD(COALESCE(MAX(SUBSTRING(order_number, 9)), 0) + 1, 6, :pad) AS next
+        $lock = $pdo->prepare('SELECT LPAD(COALESCE(MAX(CAST(SUBSTRING(order_number, 10) AS UNSIGNED)), 0) + 1, 6, :pad) AS next
                                FROM orders WHERE order_number LIKE :prefix');
         $lock->execute([':pad' => '0', ':prefix' => "EMB-$year-%"]);
         $seq = $lock->fetch();
@@ -95,7 +140,7 @@ function place_order(int $customerId, array $input, string $idempotencyKey): arr
                  shipping_address, customer_note, idempotency_key, placed_at)
              VALUES
                 (:num, :cust, :name, :email, :phone, :status, :pay_status, :method,
-                 :subtotal, :discount, NULL, :shipping, :grand, :currency,
+                 :subtotal, :discount, :coupon, :shipping, :grand, :currency,
                  :address, :note, :idem, UTC_TIMESTAMP())'
         );
         $ins->execute([
@@ -105,6 +150,7 @@ function place_order(int $customerId, array $input, string $idempotencyKey): arr
             ':status' => 'pending_confirmation', ':pay_status' => $paymentStatus, ':method' => $method,
             ':subtotal' => money_from_cents($subtotal),
             ':discount' => money_from_cents($discount),
+            ':coupon' => $couponCode,
             ':shipping' => money_from_cents($shippingCents),
             ':grand'    => money_from_cents($grand),
             ':currency' => 'PKR',
@@ -121,7 +167,7 @@ function place_order(int $customerId, array $input, string $idempotencyKey): arr
              VALUES (:o, :v, :p, :name, :label, :sku, :unit, :qty, :total)'
         );
         foreach ($lines as $line) {
-            $label = trim(($line['size_label'] ?? '') . ' ' . ($line['color_label'] ?? ''));
+            $label = $line['variant_label'] ?? trim(($line['size_label'] ?? '') . ' ' . ($line['color_label'] ?? ''));
             $insItem->execute([
                 ':o' => $orderId, ':v' => $line['variant_id'], ':p' => $line['product_id'],
                 ':name' => $line['product_name'], ':label' => $label ?: null,
@@ -143,6 +189,12 @@ function place_order(int $customerId, array $input, string $idempotencyKey): arr
         );
         $pay->execute([':o' => $orderId, ':m' => $method, ':s' => $paymentStatus, ':amt' => money_from_cents($grand)]);
 
+        // ---- Coupon usage counter ----
+        if ($couponCode !== null) {
+            $pdo->prepare('UPDATE coupons SET used_count = used_count + 1 WHERE code = :c')
+                ->execute([':c' => $couponCode]);
+        }
+
         // ---- History seed ----
         $hist = $pdo->prepare(
             'INSERT INTO order_status_history (order_id, from_status, to_status, user_id, created_at)
@@ -156,8 +208,23 @@ function place_order(int $customerId, array $input, string $idempotencyKey): arr
             $del = $pdo->prepare('DELETE FROM cart_items WHERE cart_id = :cart');
             $del->execute([':cart' => (int)$cartRow['id']]);
         }
+        unset($_SESSION['applied_coupon']);
 
         $pdo->commit();
+
+        // ---- Notifications (best-effort, never blocks the order) ----
+        try {
+            $orderRow = ['id' => $orderId, 'order_number' => $orderNumber, 'full_name' => $name,
+                         'email' => $email, 'payment_method' => $method, 'shipping_total' => $shippingCents / 100,
+                         'discount_total' => $discount / 100, 'grand_total' => $grand / 100];
+            mailer_order_confirmation($orderRow, array_map(static fn($l) => [
+                'product_name' => $l['product_name'], 'variant_label' => $l['variant_label'] ?? '',
+                'sku' => $l['sku'], 'quantity' => $l['quantity'], 'line_total' => $l['line_total_cents'] / 100,
+            ], $lines));
+        } catch (Throwable $e) {
+            app_log('error', 'order confirmation email failed: ' . $e->getMessage());
+        }
+
         return [true, ['order_id' => $orderId, 'order_number' => $orderNumber]];
     } catch (Throwable $e) {
         $pdo->rollBack();

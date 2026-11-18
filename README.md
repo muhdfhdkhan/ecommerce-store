@@ -6,12 +6,27 @@ Docs that govern this codebase: `SECURITY.md` (mandatory on every feature), `DES
 
 ## Status
 
-Phase 1 (Foundation) started:
+**Phases 1–8 complete** (storefront, catalog, cart/checkout, orders & admin ops,
+business management, website management, production readiness):
 
-- Folder structure per `PROJECT_BRIEF.md` §25 — only `public/` is web-exposed
-- Secure admin authentication: CSRF, rate limiting, timing-safe password verify, session hardening, audit log (`SECURITY.md` §7–§11, §29)
-- Admin dashboard shell with "Welcome, Administrator"
-- Tailwind design tokens from `DESIGN.md` §3–§5, built & self-hosted (no CDN)
+- Phase 1–2: Foundation, catalog (products/categories/collections with multi-image
+  upload, variant size/length/color for patches & motifs)
+- Phase 3–4: Storefront (hero slider from admin-managed banners with patch/motif
+  titles, shop, cart, checkout with coupons, account area)
+- Phase 5: Order lifecycle, payments, customers, inventory, shipping, audit logs
+- Phase 6 (business): `admin/analytics.php` (KPIs, 14-day revenue chart, top products,
+  low stock, pipeline), `admin/promotions.php` (coupons), `admin/customers.php`,
+  `admin/suppliers.php` + `admin/purchasing.php` (PO draft → ordered → received with
+  stock trail), financial section in `admin/reports.php` (discounts, coupon usage, COGS
+  estimate, margin)
+- Phase 7 (website): `admin/banners.php` (hero slides with image upload + announcement
+  bar + email log), `admin/cms.php` (pages CRUD at `/page/{slug}`), `admin/seo.php`
+  (meta title/description per product/category/page, consumed by the storefront),
+  transactional email via `includes/mailer.php` logged to `email_log`
+- Phase 8: `docs/SECURITY-AUDIT.md` (live checks + findings), automated smoke tests
+  (`php tests\smoke.php` — 20 assertions), perf indexes + load-tested
+  (523–677 req/s local), backup/restore scripts (`scripts/backup.ps1`,
+  `scripts/restore.ps1`, round-trip verified)
 
 ## Run locally (XAMPP)
 
@@ -36,6 +51,19 @@ C:\xampp\mysql\bin\mysql.exe -u root patches_motifs -e "SOURCE database/schema.s
 php database/seed.php
 
 # New migration placeholder files go in database/migrations/
+# Applied so far: schema.sql, 002 (seed), 003 (phases 6-8), 004 (SEO + seed)
+
+# Automated smoke tests (20 assertions; safe to re-run)
+php tests\smoke.php
+
+# Backup / restore (Phase 8)
+powershell -File scripts\backup.ps1 -Keep 14
+powershell -File scripts\restore.ps1 -DumpFile storage\backups\db_XXXX.sql
+
+# Security audit report: docs/SECURITY-AUDIT.md
+
+# Regenerate demo imagery (hero slides, product photos, collection cover)
+php database/make_placeholders.php
 ```
 
 ## Web server

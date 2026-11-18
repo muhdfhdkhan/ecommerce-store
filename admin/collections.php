@@ -17,10 +17,43 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $dupe = db()->prepare('SELECT id FROM collections WHERE slug = :s');
         $dupe->execute([':s' => $slug]);
         if ($dupe->fetch()) { $slug .= '-' . bin2hex(random_bytes(2)); }
-        $st = db()->prepare('INSERT INTO collections (title, slug, description) VALUES (:t, :s, :d)');
-        $st->execute([':t' => $title, ':s' => $slug, ':d' => $desc ?: null]);
+        $imagePath = null;
+        if (!empty($_FILES['image']['name'])) {
+            try {
+                $imagePath = image_upload_store($_FILES['image'], 'collections');
+            } catch (RuntimeException $e) {
+                $_SESSION['flash_error'] = $e->getMessage();
+            }
+        }
+        $st = db()->prepare('INSERT INTO collections (title, slug, description, image_path) VALUES (:t, :s, :d, :img)');
+        $st->execute([':t' => $title, ':s' => $slug, ':d' => $desc ?: null, ':img' => $imagePath]);
         audit('collection_created', 'collection', (int)db()->lastInsertId(), null, ['title' => $title]);
-        $_SESSION['flash_success'] = 'Collection created.';
+        if ($imagePath !== null) {
+            $_SESSION['flash_success'] = 'Collection created with image.';
+        } elseif (!isset($_SESSION['flash_error'])) {
+            $_SESSION['flash_success'] = 'Collection created.';
+        }
+    }
+
+    if ($do === 'upload_image') {
+        $collId = int_in($_POST['collection_id'] ?? null);
+        if ($collId && !empty($_FILES['image']['name'])) {
+            try {
+                $rel = image_upload_store($_FILES['image'], 'collections');
+                $st = db()->prepare('SELECT image_path FROM collections WHERE id = :id');
+                $st->execute([':id' => $collId]);
+                $old = $st->fetchColumn();
+                if ($old) { image_upload_delete((string)$old); }
+                db()->prepare('UPDATE collections SET image_path = :img WHERE id = :id')
+                    ->execute([':img' => $rel, ':id' => $collId]);
+                audit('collection_image_updated', 'collection', $collId);
+                $_SESSION['flash_success'] = 'Collection image updated.';
+            } catch (RuntimeException $e) {
+                $_SESSION['flash_error'] = $e->getMessage();
+            }
+        } else {
+            $_SESSION['flash_error'] = 'Choose an image first.';
+        }
     }
 
     if ($do === 'add_product') {
@@ -49,26 +82,36 @@ admin_layout('Collections', function () use ($ADMIN) {
     <h1 class="text-xl font-bold tracking-tight sm:text-2xl">Collections</h1>
 
     <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div class="overflow-hidden rounded-2xl border border-line bg-surface">
-            <?php if (!$colls): ?>
-                <p class="p-8 text-center text-sm text-muted-ink">No collections yet.</p>
-            <?php else: ?>
-            <div class="divide-y divide-line">
-                <?php foreach ($colls as $c): ?>
-                <div class="flex items-center gap-3 p-4">
-                    <div class="min-w-0 flex-1">
-                        <p class="font-semibold"><?= e($c['title']) ?></p>
-                        <p class="text-xs text-muted-ink">/<?= e($c['slug']) ?> · <?= (int)$c['product_count'] ?> products · <?= e($c['status']) ?></p>
-                    </div>
+        <div class="space-y-4">
+            <?php foreach ($colls as $c): ?>
+            <div class="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4">
+                <div class="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-stone-soft">
+                    <?php if (!empty($c['image_path'])): ?>
+                        <img src="/uploads/<?= e($c['image_path']) ?>" alt="" class="h-full w-full object-cover">
+                    <?php endif; ?>
                 </div>
-                <?php endforeach; ?>
+                <div class="min-w-0 flex-1">
+                    <p class="font-semibold"><?= e($c['title']) ?></p>
+                    <p class="text-xs text-muted-ink">/<?= e($c['slug']) ?> · <?= (int)$c['product_count'] ?> products · <?= e($c['status']) ?></p>
+                </div>
+                <?php if ($canEdit): ?>
+                <form method="post" enctype="multipart/form-data" class="flex items-center gap-2">
+                    <input type="hidden" name="do" value="upload_image">
+                    <input type="hidden" name="collection_id" value="<?= (int)$c['id'] ?>">
+                    <?= csrf_field() ?>
+                    <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required
+                           class="max-w-[180px] text-xs" aria-label="Image for <?= e($c['title']) ?>">
+                    <button class="h-10 rounded-xl bg-ink px-4 text-sm font-semibold text-white">Set image</button>
+                </form>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
+            <?php if (!$colls): ?><p class="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-muted-ink">No collections yet.</p><?php endif; ?>
         </div>
 
         <?php if ($canEdit): ?>
         <div class="space-y-6">
-            <form method="post" class="rounded-2xl border border-line bg-surface p-5">
+            <form method="post" enctype="multipart/form-data" class="rounded-2xl border border-line bg-surface p-5">
                 <input type="hidden" name="do" value="create">
                 <?= csrf_field() ?>
                 <h2 class="font-bold">New collection</h2>
@@ -76,6 +119,8 @@ admin_layout('Collections', function () use ($ADMIN) {
                 <input id="title" name="title" required maxlength="120" class="mt-1.5 h-11 w-full rounded-xl border border-line bg-canvas/60 px-3">
                 <label for="cdesc" class="mt-3 block text-sm font-semibold">Description</label>
                 <textarea id="cdesc" name="description" rows="2" maxlength="400" class="mt-1.5 w-full rounded-xl border border-line bg-canvas/60 px-3 py-2"></textarea>
+                <label for="cimg" class="mt-3 block text-sm font-semibold">Cover image <span class="font-normal text-muted-ink">(JPG/PNG/WebP, ≤5 MB)</span></label>
+                <input id="cimg" type="file" name="image" accept="image/jpeg,image/png,image/webp" class="mt-1.5 w-full text-sm">
                 <button class="mt-4 h-11 w-full rounded-xl bg-accent font-semibold text-white hover:bg-accent/90">Create</button>
             </form>
 

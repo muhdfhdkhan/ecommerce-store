@@ -12,7 +12,7 @@ if ($cmsSlug !== '') {
     if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $cmsSlug)) {
         abort(404);
     }
-    $st = db()->prepare("SELECT title, content FROM pages WHERE slug = :s AND status = 'published' LIMIT 1");
+    $st = db()->prepare("SELECT title, content, meta_title, meta_description FROM pages WHERE slug = :s AND status = 'published' LIMIT 1");
     $st->execute([':s' => $cmsSlug]);
     $page = $st->fetch();
     if (!$page) {
@@ -29,7 +29,10 @@ if ($cmsSlug !== '') {
         <?php endforeach; ?>
     </div>
 </div>
-<?php });
+<?php }, [
+    'meta_title' => $page['meta_title'] ?: null,
+    'meta_description' => $page['meta_description'] ?: null,
+]);
     return;
 }
 

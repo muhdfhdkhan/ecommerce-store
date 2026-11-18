@@ -99,6 +99,13 @@ function app_log(string $level, string $message): void
     @file_put_contents(STORAGE_PATH . '/logs/app-' . gmdate('Y-m-d') . '.log', $line, FILE_APPEND | LOCK_EX);
 }
 
+/** Human label for a variant: "3\" · Border 12\" · Emerald" (empty parts skipped). */
+function variant_label(string $sku, ?string $size, ?string $length, ?string $color): string
+{
+    $parts = array_filter([$size, $length, $color], static fn($p) => $p !== null && trim($p) !== '');
+    return $parts === [] ? $sku : implode(' · ', array_map('trim', $parts));
+}
+
 /** Fetch one config value by dotted path, e.g. config('db.name'). */
 function config(string $key, mixed $default = null): mixed
 {

@@ -18,7 +18,7 @@ function store_layout(string $title, callable $content, array $opts = []): void
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= e($title) ?> — <?= e($storeName) ?></title>
+<title><?= e($opts['meta_title'] ?? $title) ?> — <?= e($storeName) ?></title>
 <meta name="description" content="<?= e($opts['meta_description'] ?? 'Embroidery patches, motifs and textile embellishments by ' . $storeName . '.') ?>">
 <link rel="stylesheet" href="/assets/css/app.css">
 <script type="module" src="/assets/js/store.js"></script>
@@ -69,7 +69,18 @@ function store_layout(string $title, callable $content, array $opts = []): void
         </nav>
     </aside>
 
-    <main id="main"><?php $content(); ?></main>
+    <main id="main">
+        <?php
+        // Announcement bar (managed in Admin → Website → Banners; stored in store_settings).
+        $ann = db()->query(
+            "SELECT setting_key, setting_value FROM store_settings
+             WHERE setting_key IN ('announcement_text','announcement_active')"
+        )->fetchAll(PDO::FETCH_KEY_PAIR);
+        if (($ann['announcement_active'] ?? '0') === '1' && ($ann['announcement_text'] ?? '') !== ''): ?>
+        <div class="bg-ink px-4 py-2 text-center text-sm font-medium text-white"><?= e((string)$ann['announcement_text']) ?></div>
+        <?php endif; ?>
+        <?php $content(); ?>
+    </main>
 
     <footer class="mt-16 bg-ink text-white">
         <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">

@@ -73,6 +73,74 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         safe_redirect('/admin/products?action=edit&id=' . $editId);
     }
 
+    if ($do === 'upload_images' && $editId) {
+        admin_require_permission($ADMIN, 'products.edit');
+        $files = $_FILES['images'] ?? null;
+        $saved = 0;
+        $failed = 0;
+        if (is_array($files['name'] ?? null)) {
+            // Enforce a sane per-request cap (SECURITY.md §18).
+            $count = min(count($files['name']), 8);
+            $chk = db()->prepare('SELECT 1 FROM product_images WHERE product_id = :id LIMIT 1');
+            $chk->execute([':id' => $editId]);
+            $hasPrimary = (bool)$chk->fetchColumn();
+            for ($i = 0; $i < $count; $i++) {
+                if (($files['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+                    continue;
+                }
+                $one = [
+                    'name' => $files['name'][$i], 'type' => $files['type'][$i],
+                    'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i],
+                    'size' => $files['size'][$i],
+                ];
+                try {
+                    $rel = image_upload_store($one, 'products');
+                    db()->prepare('INSERT INTO product_images (product_id, file_path, alt_text, sort_order, is_primary)
+                                   VALUES (:p, :f, :a, :s, :prim)')
+                        ->execute([':p' => $editId, ':f' => $rel,
+                                   ':a' => mb_substr(trim((string)($_POST['alt_text'] ?? '')), 0, 255) ?: null,
+                                   ':s' => $i, ':prim' => (!$hasPrimary && $saved === 0) ? 1 : 0]);
+                    $saved++;
+                } catch (RuntimeException $e) {
+                    $failed++;
+                    app_log('error', 'image upload rejected: ' . $e->getMessage());
+                }
+            }
+        }
+        $_SESSION['flash_' . ($saved > 0 ? 'success' : 'error')] =
+            $saved > 0 ? "$saved image(s) uploaded." . ($failed ? " $failed rejected." : "") : ($files ? 'No valid image found — JPG/PNG/WebP under 5 MB only.' : 'Choose image files first.');
+        safe_redirect('/admin/products?action=edit&id=' . $editId);
+    }
+
+    if ($do === 'primary_image' && $editId) {
+        admin_require_permission($ADMIN, 'products.edit');
+        $imgId = int_in($_POST['image_id'] ?? null);
+        if ($imgId) {
+            $pdo = db();
+            $pdo->prepare('UPDATE product_images SET is_primary = 0 WHERE product_id = :p')->execute([':p' => $editId]);
+            $pdo->prepare('UPDATE product_images SET is_primary = 1 WHERE id = :i AND product_id = :p')
+                ->execute([':i' => $imgId, ':p' => $editId]);
+            $_SESSION['flash_success'] = 'Primary image updated.';
+        }
+        safe_redirect('/admin/products?action=edit&id=' . $editId);
+    }
+
+    if ($do === 'delete_image' && $editId) {
+        admin_require_permission($ADMIN, 'products.edit');
+        $imgId = int_in($_POST['image_id'] ?? null);
+        if ($imgId) {
+            $st = db()->prepare('SELECT file_path FROM product_images WHERE id = :i AND product_id = :p');
+            $st->execute([':i' => $imgId, ':p' => $editId]);
+            $path = $st->fetchColumn();
+            if ($path) {
+                image_upload_delete((string)$path);
+                db()->prepare('DELETE FROM product_images WHERE id = :i')->execute([':i' => $imgId]);
+                $_SESSION['flash_success'] = 'Image removed.';
+            }
+        }
+        safe_redirect('/admin/products?action=edit&id=' . $editId);
+    }
+
     if ($do === 'delete' && $editId) {
         admin_require_permission($ADMIN, 'products.delete');
         // Soft delete (PROJECT_BRIEF §22).
@@ -89,6 +157,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $vPrice = (string)($_POST['variant_price'] ?? '');
         $vStock = int_in($_POST['variant_stock'] ?? null, 0, 1000000) ?? 0;
         $size = trim(mb_substr((string)($_POST['size_label'] ?? ''), 0, 32)) ?: null;
+        $length = trim(mb_substr((string)($_POST['length_label'] ?? ''), 0, 32)) ?: null;
         $color = trim(mb_substr((string)($_POST['color_label'] ?? ''), 0, 32)) ?: null;
 
         if (preg_match('/^[A-Z0-9-]{2,64}$/', $vSku) && preg_match('/^\d{1,10}(\.\d{1,2})?$/', $vPrice) && (float)$vPrice > 0) {
@@ -96,9 +165,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             try {
                 $pdo->beginTransaction();
                 $ins = $pdo->prepare(
-                    'INSERT INTO product_variants (product_id, sku, size_label, color_label, price) VALUES (:p, :sku, :size, :color, :price)'
+                    'INSERT INTO product_variants (product_id, sku, size_label, length_label, color_label, price)
+                     VALUES (:p, :sku, :size, :length, :color, :price)'
                 );
-                $ins->execute([':p' => $editId, ':sku' => $vSku, ':size' => $size, ':color' => $color, ':price' => $vPrice]);
+                $ins->execute([':p' => $editId, ':sku' => $vSku, ':size' => $size, ':length' => $length, ':color' => $color, ':price' => $vPrice]);
                 $vid = (int)$pdo->lastInsertId();
                 // Seed inventory row.
                 $inv = $pdo->prepare('INSERT INTO inventory (variant_id, quantity_on_hand) VALUES (:v, :q)');
