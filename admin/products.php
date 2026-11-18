@@ -68,6 +68,55 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 ':featured' => $featured, ':mto' => $madeToOrder, ':lead' => $leadTime]);
             $editId = (int)$pdo->lastInsertId();
             audit('product_created', 'product', $editId, null, ['name' => $name, 'price' => $price]);
+
+            // Images uploaded at creation time — same hardened pipeline as the Images section.
+            $files = $_FILES['images'] ?? null;
+            $altText = mb_substr(trim((string)($_POST['alt_text'] ?? '')), 0, 255);
+            if (is_array($files['name'] ?? null)) {
+                $count = min(count($files['name']), 8);
+                $first = true;
+                for ($i = 0; $i < $count; $i++) {
+                    if (($files['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+                        continue;
+                    }
+                    $one = [
+                        'name' => $files['name'][$i], 'type' => $files['type'][$i],
+                        'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i],
+                        'size' => $files['size'][$i],
+                    ];
+                    try {
+                        $rel = image_upload_store($one, 'products');
+                        $pdo->prepare('INSERT INTO product_images (product_id, file_path, alt_text, sort_order, is_primary)
+                                       VALUES (:p, :f, :a, :s, :prim)')
+                            ->execute([':p' => $editId, ':f' => $rel,
+                                       ':a' => $altText !== '' ? $altText : $name,
+                                       ':s' => $i, ':prim' => $first ? 1 : 0]);
+                        $first = false;
+                    } catch (RuntimeException $e) {
+                        app_log('error', 'create image rejected: ' . $e->getMessage());
+                    }
+                }
+            }
+
+            // First variant: from the explicit fields, or a sensible default from the product.
+            $vSku = strtoupper(trim(mb_substr((string)($_POST['variant_sku'] ?? ''), 0, 64)));
+            if ($vSku === '') { $vSku = $sku; }
+            $vSize = trim(mb_substr((string)($_POST['variant_size'] ?? ''), 0, 32)) ?: null;
+            $vLength = trim(mb_substr((string)($_POST['variant_length'] ?? ''), 0, 32)) ?: null;
+            $vColor = trim(mb_substr((string)($_POST['variant_color'] ?? ''), 0, 32)) ?: null;
+            $vPrice = trim((string)($_POST['variant_price'] ?? ''));
+            if ($vPrice === '' || !preg_match('/^\d{1,10}(\.\d{1,2})?$/', $vPrice)) { $vPrice = $price; }
+            if (preg_match('/^[A-Z0-9-]{2,64}$/', $vSku)) {
+                $pdo->prepare('INSERT INTO product_variants (product_id, sku, size_label, length_label, color_label, price)
+                               VALUES (:p, :sku, :size, :length, :color, :price)')
+                    ->execute([':p' => $editId, ':sku' => $vSku, ':size' => $vSize, ':length' => $vLength, ':color' => $vColor, ':price' => $vPrice]);
+                $vid = (int)$pdo->lastInsertId();
+                $pdo->prepare('INSERT INTO inventory (variant_id, quantity_on_hand) VALUES (:v, 0)')
+                    ->execute([':v' => $vid]);
+                $pdo->prepare('INSERT INTO stock_movements (variant_id, change_qty, reason, user_id, note, created_at)
+                               VALUES (:v, 0, :r, :u, :n, UTC_TIMESTAMP())')
+                    ->execute([':v' => $vid, ':r' => 'initial', ':u' => (int)$ADMIN['id'], ':n' => 'Variant created with product']);
+            }
         }
         $_SESSION['flash_success'] = 'Product saved.';
         safe_redirect('/admin/products?action=edit&id=' . $editId);

@@ -78,6 +78,7 @@ function mailer_order_status(string $toEmail, string $orderNumber, int $orderId,
         'delivered' => 'has been delivered',
         'cancelled' => 'has been cancelled',
         'on_hold' => 'is temporarily on hold',
+        'returned' => 'has been returned - we are processing it',
     ];
     $msg = $friendly[$status] ?? 'was updated';
     $body = "Your order {$orderNumber} {$msg}.\n\nTrack it from your account.\n\n— Patches&Motifs";

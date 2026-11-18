@@ -51,3 +51,26 @@ if (poLines && poAddBtn) {
     poLines.appendChild(clone);
   });
 }
+
+// ---- Orders: bulk selection (count badge + select row highlighting) ----
+const bulkChecks = Array.from(document.querySelectorAll('[data-bulk-check]'));
+const bulkCount = document.querySelector('[data-bulk-count]');
+function refreshBulkCount() {
+  const n = bulkChecks.filter((c) => c.checked).length;
+  if (bulkCount) bulkCount.textContent = String(n);
+}
+bulkChecks.forEach((c) => c.addEventListener('change', refreshBulkCount));
+refreshBulkCount();
+document.querySelector('[data-bulk-all]')?.addEventListener('change', (e) => {
+  bulkChecks.forEach((c) => { c.checked = e.target.checked; });
+  refreshBulkCount();
+});
+
+// Bulk print: build a GET url from the current selection.
+document.querySelector('[data-bulk-print]')?.addEventListener('click', () => {
+  const ids = bulkChecks.filter((c) => c.checked).map((c) => c.value);
+  if (ids.length === 0) { alert('Select at least one order to print.'); return; }
+  window.open('/admin/orders/print?ids=' + ids.join(',') + '&autoprint=1', '_blank', 'noopener');
+});
+
+// Print sheet page: auto-print requested via ?autoprint=1 is handled in print.js.

@@ -109,3 +109,20 @@ if (hero && hero.querySelectorAll('[data-hero-slide]').length > 1) {
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : play()));
   play();
 }
+
+// Header search: expand/collapse the search bar beside the cart button.
+const searchToggle = document.querySelector('[data-search-toggle]');
+const searchBar = document.querySelector('[data-search-bar]');
+if (searchToggle && searchBar) {
+  searchToggle.addEventListener('click', () => {
+    const open = searchBar.classList.toggle('hidden') === false;
+    searchToggle.setAttribute('aria-expanded', String(open));
+    if (open) searchBar.querySelector('input')?.focus();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !searchBar.classList.contains('hidden')) {
+      searchBar.classList.add('hidden');
+      searchToggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+}

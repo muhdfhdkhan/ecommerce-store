@@ -116,7 +116,7 @@ function admin_layout(string $title, callable $content): void
 
 <div class="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:py-8">
     <div data-drawer-backdrop class="fixed inset-0 z-40 hidden bg-ink/40 lg:hidden"></div>
-    <aside data-drawer class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full border-r border-line bg-surface p-4 transition-transform duration-200 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:w-60 lg:shrink-0 lg:translate-x-0 lg:rounded-2xl lg:border">
+    <aside data-drawer class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full overflow-y-auto border-r border-line bg-surface p-4 transition-transform duration-200 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:w-60 lg:shrink-0 lg:translate-x-0 lg:rounded-2xl lg:border">
         <nav aria-label="Admin navigation" class="space-y-1">
             <a href="/admin/dashboard" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition hover:bg-canvas">Overview</a>
             <a href="/admin/analytics" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Analytics</a>
@@ -161,7 +161,7 @@ function admin_product_form(?array $p, array $variants, array $cats, bool $canEd
     <h1 class="text-xl font-bold tracking-tight sm:text-2xl"><?= $id ? 'Edit product' : 'New product' ?></h1>
 </div>
 
-<form method="post" action="/admin/products<?= $id ? '?action=edit&id=' . (int)$id : '?action=new' ?>" class="mt-6 max-w-3xl space-y-6">
+<form method="post" action="/admin/products<?= $id ? '?action=edit&id=' . (int)$id : '?action=new' ?>" enctype="multipart/form-data" class="mt-6 max-w-3xl space-y-6">
     <input type="hidden" name="do" value="save">
     <?= csrf_field() ?>
 
@@ -232,6 +232,57 @@ function admin_product_form(?array $p, array $variants, array $cats, bool $canEd
             </div>
         </div>
     </section>
+
+    <?php if (!$id): ?>
+    <!-- Create-only: upload images + first variant straight from the Add form. -->
+    <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+        <h2 class="font-bold">Images</h2>
+        <p class="mt-1 text-xs text-muted-ink">Upload product photos now (JPG/PNG/WebP, up to 5 MB each, max 8). The first becomes the primary; you can manage more after saving.</p>
+        <div class="mt-3 flex flex-wrap items-end gap-3">
+            <label class="block text-sm">Choose files (multiple allowed)
+                <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple
+                       class="mt-1 block w-full max-w-xs rounded-xl border border-line bg-surface px-3 py-2 text-sm">
+            </label>
+            <label class="block text-sm">Alt text (accessibility)
+                <input name="alt_text" maxlength="255" class="mt-1 block w-56 rounded-xl border border-line bg-surface px-3 py-2 text-sm">
+            </label>
+        </div>
+    </section>
+
+    <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+        <h2 class="font-bold">First variant <span class="font-normal text-muted-ink">— size / length / color for patches &amp; motifs</span></h2>
+        <p class="mt-1 text-xs text-muted-ink">Optional. If left blank, a variant is created from the product SKU with the regular price and zero stock. Add more variants after saving.</p>
+        <div class="mt-3 grid gap-3 sm:grid-cols-5">
+            <input name="variant_sku" placeholder="SKU (blank = product SKU)" maxlength="64"
+                   class="h-11 rounded-xl border border-line bg-surface px-3 font-mono text-sm uppercase sm:col-span-2">
+            <select name="variant_size" class="h-11 rounded-xl border border-line bg-surface px-3 text-sm" aria-label="Size">
+                <option value="">Size…</option>
+                <optgroup label="Patch / motif size (inches)">
+                    <?php foreach (['1"', '1.5"', '2"', '3"', '4"', '5"', '6"', '8"', '10"'] as $s): ?>
+                        <option value="<?= e($s) ?>"><?= e($s) ?></option>
+                    <?php endforeach; ?>
+                </optgroup>
+                <optgroup label="General">
+                    <?php foreach (['Small', 'Medium', 'Large', 'One size'] as $s): ?>
+                        <option value="<?= e($s) ?>"><?= e($s) ?></option>
+                    <?php endforeach; ?>
+                </optgroup>
+            </select>
+            <input name="variant_length" placeholder="Length (e.g. Border 12&quot;)" maxlength="32" list="length-presets-new"
+                   class="h-11 rounded-xl border border-line bg-surface px-3 text-sm">
+            <datalist id="length-presets-new">
+                <?php foreach (['Border 12"', 'Border 9"', 'Border 6"', 'Full length', 'Custom'] as $l): ?>
+                    <option value="<?= e($l) ?>">
+                <?php endforeach; ?>
+            </datalist>
+            <input name="variant_color" placeholder="Color" maxlength="32" class="h-11 rounded-xl border border-line bg-surface px-3 text-sm">
+        </div>
+        <div class="mt-3">
+            <label class="block text-xs font-semibold text-muted-ink">Variant price (PKR, blank = regular price)</label>
+            <input name="variant_price" inputmode="decimal" class="mt-1 h-11 w-40 rounded-xl border border-line bg-surface px-3 text-sm tabular-nums">
+        </div>
+    </section>
+    <?php endif; ?>
 
     <?php if ($id): ?>
     <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6" id="images-section">

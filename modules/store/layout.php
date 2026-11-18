@@ -12,6 +12,22 @@ function store_layout(string $title, callable $content, array $opts = []): void
     $cartCount = cart_view()['count'] ?? 0;
     $storeName = 'Patches&Motifs';
     $headerCompact = $opts['compact_header'] ?? false;
+
+    // Brand + ticker settings (single query; missing keys fall back below).
+    $brand = db()->query(
+        "SELECT setting_key, setting_value FROM store_settings
+         WHERE setting_key IN ('logo_path','ticker_text','ticker_active')"
+    )->fetchAll(PDO::FETCH_KEY_PAIR);
+    $logo = trim((string)($brand['logo_path'] ?? ''));
+    $tickerActive = ($brand['ticker_active'] ?? '1') === '1';
+    $tickerText = trim((string)($brand['ticker_text'] ?? ''));
+    if ($tickerText === '') {
+        $tickerText = 'Delivery All Over Pakistan | Free Delivery in Faisalabad';
+    }
+    // Duplicate content twice for a seamless CSS marquee loop.
+    $tickerItems = array_values(array_filter(array_map('trim', explode('|', $tickerText))));
+    if (!$tickerItems) { $tickerItems = [$tickerText]; }
+    $tickerRun = implode('&nbsp;&nbsp;&bull;&nbsp;&nbsp;', array_map('e', array_merge($tickerItems, $tickerItems)));
     ?>
 <!doctype html>
 <html lang="en" class="h-full">
@@ -20,14 +36,29 @@ function store_layout(string $title, callable $content, array $opts = []): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($opts['meta_title'] ?? $title) ?> — <?= e($storeName) ?></title>
 <meta name="description" content="<?= e($opts['meta_description'] ?? 'Embroidery patches, motifs and textile embellishments by ' . $storeName . '.') ?>">
+<?php if ($logo !== ''): ?>
+<link rel="icon" type="image/jpeg" href="/uploads/<?= e($logo) ?>">
+<?php endif; ?>
 <link rel="stylesheet" href="/assets/css/app.css">
 <script type="module" src="/assets/js/store.js"></script>
 </head>
 <body class="min-h-full bg-canvas text-ink antialiased">
     <header class="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+        <?php if ($tickerActive): ?>
+        <!-- Fixed sliding ticker: shown on every page (text managed in Settings). -->
+        <div class="overflow-hidden bg-ink py-1.5 text-white" aria-label="Delivery information">
+            <p class="ticker whitespace-nowrap text-[13px] font-medium tracking-wide" data-ticker>
+                <?= $tickerRun ?>
+            </p>
+        </div>
+        <?php endif; ?>
         <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
             <a href="/" class="flex items-center gap-2.5" aria-label="<?= e($storeName) ?> home">
-                <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-full bg-ink text-[13px] font-bold tracking-tight text-white">P&amp;M</span>
+                <?php if ($logo !== ''): ?>
+                    <img src="/uploads/<?= e($logo) ?>" alt="" class="h-9 w-9 rounded-full object-cover">
+                <?php else: ?>
+                    <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-full bg-ink text-[13px] font-bold tracking-tight text-white">P&amp;M</span>
+                <?php endif; ?>
                 <span class="text-[15px] font-bold tracking-tight">Patches&amp;Motifs</span>
             </a>
             <nav aria-label="Primary" class="ml-6 hidden items-center gap-1 lg:flex">
@@ -37,6 +68,11 @@ function store_layout(string $title, callable $content, array $opts = []): void
                 <a href="/contact" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-canvas">Contact</a>
             </nav>
             <div class="ml-auto flex items-center gap-2">
+                <!-- Search: expanding bar (GET /shop) next to the cart button. -->
+                <button type="button" data-search-toggle aria-label="Search products" aria-expanded="false"
+                        class="grid h-11 w-11 place-items-center rounded-full transition hover:bg-canvas">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>
+                </button>
                 <a href="/cart" class="relative grid h-11 w-11 place-items-center rounded-full transition hover:bg-canvas" aria-label="Cart (<?= (int)$cartCount ?> items)">
                     <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1.2 12.2a1.8 1.8 0 0 1-1.8 1.8H9a1.8 1.8 0 0 1-1.8-1.8L6 7Z"/><path d="M9 7a3 3 0 1 1 6 0"/></svg>
                     <span class="cart-count absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[10px] font-bold text-white tabular-nums" data-cart-count><?= (int)$cartCount ?></span>
@@ -47,6 +83,14 @@ function store_layout(string $title, callable $content, array $opts = []): void
                     <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
                 </button>
             </div>
+        </div>
+        <!-- Expanding search bar (hidden until the search button is tapped). -->
+        <div data-search-bar class="hidden border-t border-line bg-surface">
+            <form method="get" action="/shop" role="search" class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+                <input name="q" type="search" maxlength="80" placeholder="Search patches and motifs&hellip;"
+                       class="h-11 w-full rounded-xl border border-line bg-canvas/60 px-4 text-sm" aria-label="Search products">
+                <button class="inline-flex h-11 shrink-0 items-center rounded-xl bg-ink px-5 text-sm font-semibold text-white">Search</button>
+            </form>
         </div>
     </header>
 

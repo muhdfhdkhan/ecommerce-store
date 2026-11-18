@@ -41,6 +41,16 @@
     to   { transform: translateX(-50%); }
 }
 
+/* Header ticker: seamless loop (content is duplicated server-side). */
+.ticker {
+    animation: ticker-scroll 22s linear infinite;
+    will-change: transform;
+}
+@keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
 /* Respect reduced motion (DESIGN.md §13, PROJECT_BRIEF §6.6) */
 @media (prefers-reduced-motion: reduce) {
     *,
