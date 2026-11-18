@@ -1,4 +1,4 @@
-# SECURITY.md — Secure, Fast & SEO-Friendly PHP Development Standard
+# SECURITY.md — Secure, Fast & SEO-Friendly PHP Development Standard for Better Integrity
 
 **Project:** Embroidery E-Commerce & Management System (Core PHP 8.3+, MySQL 8, Tailwind, Vanilla JS)
 **Audience:** Every developer who writes or reviews code for this project
