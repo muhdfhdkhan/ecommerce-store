@@ -37,6 +37,56 @@ function safe_url(string $url): string
     return $url;
 }
 
+/* ---- Money math: integer paisa/cents, never floats (SECURITY.md §20.1, §38.2) ---- */
+
+function money_to_cents(string $decimal): int
+{
+    return (int)round((float)$decimal * 100);
+}
+
+function money_from_cents(int $cents): string
+{
+    return number_format($cents / 100, 2, '.', '');
+}
+
+function money_fmt(int $cents): string
+{
+    return 'Rs ' . number_format($cents / 100, 0);
+}
+
+/** Server-side URL slug generator. */
+function slugify(string $text): string
+{
+    $text = strtolower(trim($text));
+    $text = preg_replace('/[^a-z0-9]+/', '-', $text) ?? '';
+    return trim($text, '-') ?: 'item';
+}
+
+/** Read a validated positive int from request input. */
+function int_in(mixed $v, int $min = 1, int $max = 2147483647): ?int
+{
+    $i = filter_var($v, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min, 'max_range' => $max]]);
+    return $i === false ? null : $i;
+}
+
+/** Render + clear one-time session flashes (storefront + admin share session keys). */
+function flash_render(): string
+{
+    $html = '';
+    foreach (['success' => 'status', 'error' => 'alert'] as $kind => $role) {
+        $key = 'flash_' . $kind;
+        if (!empty($_SESSION[$key])) {
+            $cls = $kind === 'success'
+                ? 'border-success/30 bg-success/10 text-success'
+                : 'border-danger/30 bg-danger/10 text-danger';
+            $html .= '<div role="' . $role . '" class="mb-4 rounded-xl border px-4 py-3 text-sm ' . $cls . '">'
+                . e((string)$_SESSION[$key]) . '</div>';
+            unset($_SESSION[$key]);
+        }
+    }
+    return $html;
+}
+
 /** Structured error log line (SECURITY.md §29 — never log secrets). */
 function app_log(string $level, string $message): void
 {

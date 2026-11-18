@@ -32,6 +32,15 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* Homepage typographic marquee (DESIGN.md §7.8) */
+.marquee {
+    animation: marquee-scroll 30s linear infinite;
+}
+@keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
 /* Respect reduced motion (DESIGN.md §13, PROJECT_BRIEF §6.6) */
 @media (prefers-reduced-motion: reduce) {
     *,

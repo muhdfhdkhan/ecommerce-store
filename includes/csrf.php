@@ -21,6 +21,24 @@ function csrf_rotate(): void
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
 }
 
+/** Verify CSRF from the X-CSRF-Token header + Origin (used by fetch() JSON endpoints). */
+function csrf_verify_header_only(): void
+{
+    $sent = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!is_string($sent) || $sent === '' || !hash_equals($_SESSION['csrf'] ?? '', $sent)) {
+        http_response_code(403);
+        exit('Invalid request.');
+    }
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if ($origin !== '') {
+        $host = parse_url($origin, PHP_URL_HOST);
+        if (!hash_equals($_SERVER['HTTP_HOST'] ?? '', (string)($host ?? ''))) {
+            http_response_code(403);
+            exit('Bad origin.');
+        }
+    }
+}
+
 /**
  * Verify the token + Origin header for state-changing requests.
  * Call on every POST/PUT/PATCH/DELETE — never change state on GET (SECURITY.md §7.2 rule 3).
@@ -29,7 +47,7 @@ function csrf_verify(): void
 {
     $sent = $_POST['_csrf'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
     if (!is_string($sent) || $sent === '' || !hash_equals($_SESSION['csrf'] ?? '', $sent)) {
-        http_response_code(419);
+        http_response_code(403);
         exit('Invalid request.');
     }
 

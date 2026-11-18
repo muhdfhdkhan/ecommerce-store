@@ -3,8 +3,8 @@
   "private": true,
   "description": "Build pipeline for Patches&Motifs self-hosted Tailwind CSS (SECURITY.md §26: self-hosted assets, no CDN runtime).",
   "scripts": {
-    "build:css": "tailwindcss -i ../resources/tailwind/input.css -o ../public/assets/css/app.css --minify",
-    "watch:css": "tailwindcss -i ../resources/tailwind/input.css -o ../public/assets/css/app.css --watch"
+    "build:css": "tailwindcss -i ./resources/tailwind/input.css -o ./public/assets/css/app.css --minify",
+    "watch:css": "tailwindcss -i ./resources/tailwind/input.css -o ./public/assets/css/app.css --watch"
   },
   "devDependencies": {
     "tailwindcss": "^4.1.0",
