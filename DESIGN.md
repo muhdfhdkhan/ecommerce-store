@@ -1,4 +1,4 @@
-# Embroidery Store — UI/UX Design Specification
+# Patches and motifs Store — UI/UX Design Specification
 
 **Version:** 1.0  
 **Reference:** User-provided Shoply storefront screenshot  
