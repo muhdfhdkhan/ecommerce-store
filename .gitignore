@@ -9,6 +9,7 @@ vendor/
 storage/logs/*
 storage/cache/*
 storage/private/*
+storage/backups/*
 !storage/logs/.gitkeep
 !storage/cache/.gitkeep
 !storage/private/.gitkeep
