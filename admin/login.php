@@ -119,8 +119,8 @@ if ($error !== null) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Admin Sign In &mdash; Patches&amp;Motifs</title>
-<link rel="stylesheet" href="/assets/css/app.css">
-<script type="module" src="/assets/js/admin.js"></script>
+<link rel="stylesheet" href="<?= asset_url('/assets/css/app.css') ?>">
+<script type="module" src="<?= asset_url('/assets/js/admin.js') ?>"></script>
 </head>
 <body class="min-h-full bg-canvas text-ink antialiased flex flex-col">
     <header class="border-b border-line bg-surface">

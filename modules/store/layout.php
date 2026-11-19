@@ -39,8 +39,8 @@ function store_layout(string $title, callable $content, array $opts = []): void
 <?php if ($logo !== ''): ?>
 <link rel="icon" type="image/jpeg" href="/uploads/<?= e($logo) ?>">
 <?php endif; ?>
-<link rel="stylesheet" href="/assets/css/app.css">
-<script type="module" src="/assets/js/store.js"></script>
+<link rel="stylesheet" href="<?= asset_url('/assets/css/app.css') ?>">
+<script type="module" src="<?= asset_url('/assets/js/store.js') ?>"></script>
 </head>
 <body class="min-h-full bg-canvas text-ink antialiased">
     <header class="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">

@@ -39,6 +39,27 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') setDrawer(false);
 });
 
+// Image uploads: instant local thumbnails before the form is submitted.
+// FileReader data URLs (not blob:) so the page CSP img-src 'self' data: allows them.
+for (const input of document.querySelectorAll('[data-image-input]')) {
+  input.addEventListener('change', () => {
+    const box = input.closest('form')?.querySelector('[data-image-preview]')
+      || input.closest('section')?.querySelector('[data-image-preview]');
+    if (!box) return;
+    box.innerHTML = '';
+    for (const file of Array.from(input.files).slice(0, 8)) {
+      if (!file.type.startsWith('image/')) continue;
+      const img = document.createElement('img');
+      img.alt = file.name;
+      img.className = 'h-16 w-16 rounded-xl border border-line object-cover';
+      const reader = new FileReader();
+      reader.onload = () => { img.src = String(reader.result); };
+      reader.readAsDataURL(file);
+      box.appendChild(img);
+    }
+  });
+}
+
 // Purchase order: clone the first line row for quick multi-line entry.
 const poLines = document.getElementById('po-lines');
 const poAddBtn = document.getElementById('po-add-line');

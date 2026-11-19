@@ -4,5 +4,6 @@ Options -Indexes -MultiViews
     Require all denied
 </FilesMatch>
 <IfModule mod_php.c>
-    php_admin_flag engine off
+    # php_flag only: php_admin_* directives are invalid inside .htaccess and 500 every image.
+    php_flag engine off
 </IfModule>

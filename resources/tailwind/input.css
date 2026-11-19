@@ -51,6 +51,26 @@
     to   { transform: translateX(-50%); }
 }
 
+/* Admin sidebar: always-visible slim scrollbar so every nav item is discoverable.
+   The nav is taller than most laptop viewports (Settings sits at the very end). */
+.admin-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: #c9c3ad transparent;
+}
+.admin-sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+.admin-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.admin-sidebar::-webkit-scrollbar-thumb {
+    background: #c9c3ad;
+    border-radius: 9999px;
+}
+.admin-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #a9a288;
+}
+
 /* Respect reduced motion (DESIGN.md §13, PROJECT_BRIEF §6.6) */
 @media (prefers-reduced-motion: reduce) {
     *,

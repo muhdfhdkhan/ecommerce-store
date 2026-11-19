@@ -23,6 +23,17 @@ function url_param(string $v): string
     return rawurlencode($v);
 }
 
+/**
+ * Asset URL with mtime cache-buster (?v=...) so browsers pick up new
+ * CSS/JS immediately instead of running a stale cached copy.
+ */
+function asset_url(string $path): string
+{
+    $abs = PUBLIC_PATH . $path;
+    $v = is_file($abs) ? filemtime($abs) : 0;
+    return e($path) . '?v=' . $v;
+}
+
 /** Validate URL scheme before rendering href/src (blocks javascript:, data:). */
 function safe_url(string $url): string
 {

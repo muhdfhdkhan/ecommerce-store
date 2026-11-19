@@ -85,8 +85,8 @@ function admin_layout(string $title, callable $content): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= e($title) ?> — Patches&amp;Motifs Admin</title>
-<link rel="stylesheet" href="/assets/css/app.css">
-<script type="module" src="/assets/js/admin.js"></script>
+<link rel="stylesheet" href="<?= asset_url('/assets/css/app.css') ?>">
+<script type="module" src="<?= asset_url('/assets/js/admin.js') ?>"></script>
 </head>
 <body class="min-h-full bg-admin-canvas text-ink antialiased">
 <header class="sticky top-0 z-30 border-b border-line bg-surface">
@@ -116,29 +116,29 @@ function admin_layout(string $title, callable $content): void
 
 <div class="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:py-8">
     <div data-drawer-backdrop class="fixed inset-0 z-40 hidden bg-ink/40 lg:hidden"></div>
-    <aside data-drawer class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full overflow-y-auto border-r border-line bg-surface p-4 transition-transform duration-200 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:w-60 lg:shrink-0 lg:translate-x-0 lg:rounded-2xl lg:border">
+    <aside data-drawer class="admin-sidebar fixed inset-y-0 left-0 z-50 w-72 -translate-x-full overflow-y-auto border-r border-line bg-surface p-4 transition-transform duration-200 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:w-60 lg:shrink-0 lg:translate-x-0 lg:rounded-2xl lg:border">
         <nav aria-label="Admin navigation" class="space-y-1">
-            <a href="/admin/dashboard" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition hover:bg-canvas">Overview</a>
-            <a href="/admin/analytics" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Analytics</a>
-            <p class="px-3 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Catalog</p>
-            <a href="/admin/products" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Products</a>
-            <a href="/admin/categories" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Categories</a>
-            <a href="/admin/collections" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Collections</a>
-            <p class="px-3 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Operations</p>
-            <a href="/admin/orders" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Orders</a>
-            <a href="/admin/inventory" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Inventory</a>
-            <a href="/admin/customers" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Customers</a>
-            <p class="px-3 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Business</p>
-            <a href="/admin/promotions" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Promotions</a>
-            <a href="/admin/suppliers" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Suppliers</a>
-            <a href="/admin/purchasing" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Purchasing</a>
-            <a href="/admin/payments" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Payments</a>
-            <a href="/admin/reports" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Reports</a>
-            <p class="px-3 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Website</p>
-            <a href="/admin/banners" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Banners</a>
-            <a href="/admin/cms" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">CMS pages</a>
-            <a href="/admin/seo" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">SEO</a>
-            <a href="/admin/settings" class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Settings</a>
+            <a href="/admin/dashboard" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition hover:bg-canvas">Overview</a>
+            <a href="/admin/analytics" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Analytics</a>
+            <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Catalog</p>
+            <a href="/admin/products" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Products</a>
+            <a href="/admin/categories" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Categories</a>
+            <a href="/admin/collections" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Collections</a>
+            <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Operations</p>
+            <a href="/admin/orders" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Orders</a>
+            <a href="/admin/inventory" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Inventory</a>
+            <a href="/admin/customers" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Customers</a>
+            <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Business</p>
+            <a href="/admin/promotions" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Promotions</a>
+            <a href="/admin/suppliers" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Suppliers</a>
+            <a href="/admin/purchasing" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Purchasing</a>
+            <a href="/admin/payments" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Payments</a>
+            <a href="/admin/reports" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Reports</a>
+            <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Website</p>
+            <a href="/admin/banners" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Banners</a>
+            <a href="/admin/cms" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">CMS pages</a>
+            <a href="/admin/seo" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">SEO</a>
+            <a href="/admin/settings" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Settings</a>
         </nav>
     </aside>
 
@@ -240,13 +240,14 @@ function admin_product_form(?array $p, array $variants, array $cats, bool $canEd
         <p class="mt-1 text-xs text-muted-ink">Upload product photos now (JPG/PNG/WebP, up to 5 MB each, max 8). The first becomes the primary; you can manage more after saving.</p>
         <div class="mt-3 flex flex-wrap items-end gap-3">
             <label class="block text-sm">Choose files (multiple allowed)
-                <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple
+                <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple data-image-input
                        class="mt-1 block w-full max-w-xs rounded-xl border border-line bg-surface px-3 py-2 text-sm">
             </label>
             <label class="block text-sm">Alt text (accessibility)
                 <input name="alt_text" maxlength="255" class="mt-1 block w-56 rounded-xl border border-line bg-surface px-3 py-2 text-sm">
             </label>
         </div>
+        <div data-image-preview class="mt-3 flex flex-wrap gap-2" aria-live="polite"></div>
     </section>
 
     <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
@@ -329,7 +330,7 @@ function admin_product_form(?array $p, array $variants, array $cats, bool $canEd
             <p class="text-xs text-muted-ink">JPG, PNG or WebP, up to 5 MB each, max 8 per upload. Images are re-processed server-side.</p>
             <div class="mt-3 flex flex-wrap items-end gap-3">
                 <label class="block text-sm">Choose files (multiple allowed)
-                    <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required
+                    <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required data-image-input
                            class="mt-1 block w-full max-w-xs rounded-xl border border-line bg-surface px-3 py-2 text-sm">
                 </label>
                 <label class="block text-sm">Alt text (accessibility)
@@ -338,6 +339,7 @@ function admin_product_form(?array $p, array $variants, array $cats, bool $canEd
                 </label>
                 <button class="inline-flex h-11 items-center rounded-xl bg-accent px-5 text-sm font-semibold text-white hover:bg-accent/90">Upload</button>
             </div>
+            <div data-image-preview class="mt-3 flex flex-wrap gap-2" aria-live="polite"></div>
         </form>
         <?php endif; ?>
     </section>
