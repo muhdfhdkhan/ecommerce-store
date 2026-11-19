@@ -5,9 +5,72 @@ declare(strict_types=1);
 require_once BASE_PATH . '/modules/store/layout.php';
 
 require_once BASE_PATH . '/modules/customers/service.php';
+require_once BASE_PATH . '/includes/google_oauth.php';
 
 $action = (string)($_GET['action'] ?? 'login');
 $customer = customer_current();
+
+// ---------------- Google Sign-In (OAuth 2.0 authorization-code flow) ----------------
+// Step 1: /account/google — mint a single-use state token, then hand off to Google.
+if ($action === 'google') {
+    if (!google_oauth_configured()) {
+        $_SESSION['flash_error'] = 'Google sign-in is not configured yet.';
+        safe_redirect('/account');
+    }
+    $state = bin2hex(random_bytes(24));
+    $_SESSION['google_oauth_state'] = $state;
+    $_SESSION['google_oauth_at']    = time();
+    // Absolute URL to Google's own domain — safe_redirect() only allows relative paths.
+    header('Location: ' . google_auth_url($state), true, 302);
+    exit;
+}
+
+// Step 2: /account/google/callback — verify state, exchange the code, sign in.
+if ($action === 'google_callback') {
+    $state = (string)($_GET['state'] ?? '');
+    $saved = (string)($_SESSION['google_oauth_state'] ?? '');
+    $at    = (int)($_SESSION['google_oauth_at'] ?? 0);
+    unset($_SESSION['google_oauth_state'], $_SESSION['google_oauth_at']);
+
+    $fail = static function (string $msg): void {
+        $_SESSION['flash_error'] = $msg;
+        safe_redirect('/account');
+    };
+
+    // State protects the callback against CSRF/login-CSRF; 10-minute lifetime.
+    if ($saved === '' || $state === '' || !hash_equals($saved, $state) || $at === 0 || (time() - $at) > 600) {
+        $fail('Your Google sign-in session expired. Please try again.');
+    }
+    if (!empty($_GET['error'])) {
+        $fail('Google sign-in was cancelled.');
+    }
+
+    $code = (string)($_GET['code'] ?? '');
+    if ($code === '') {
+        $fail('Google did not return an authorization code.');
+    }
+
+    $token = google_exchange_code($code);
+    if ($token === null) {
+        $fail('Could not verify your Google account. Please try again.');
+    }
+
+    $profile = google_profile($token);
+    if ($profile === null) {
+        $fail('Google did not provide a verified email address.');
+    }
+
+    [$ok, $info, $err] = google_customer_sign_in($profile);
+    if ($ok !== true || !is_array($info)) {
+        $fail($err ?: 'Could not sign you in with Google.');
+    }
+
+    record_login_attempt('customer_login', 'email:' . $profile['email'], true);
+    customer_start_session($info);
+    cart_merge_into_customer((int)$info['id']);
+    $_SESSION['flash_success'] = 'Signed in with Google.';
+    safe_redirect('/account');
+}
 
 // Signed-in customers see their dashboard.
 if ($customer !== null && $action !== 'logout') {
@@ -113,7 +176,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 // ---------- Login / Register forms ----------
 $isRegister = $action === 'register';
-store_layout($isRegister ? 'Create account' : 'Sign in', function () use ($isRegister, $error) { ?>
+$googleEnabled = google_oauth_configured();
+store_layout($isRegister ? 'Create account' : 'Sign in', function () use ($isRegister, $error, $googleEnabled) { ?>
 <div class="mx-auto max-w-md px-4 py-12 sm:py-16">
     <div class="rounded-3xl border border-line bg-surface p-6 sm:p-8">
         <h1 class="text-xl font-bold tracking-tight sm:text-2xl"><?= $isRegister ? 'Create your account' : 'Sign in' ?></h1>
@@ -122,6 +186,22 @@ store_layout($isRegister ? 'Create account' : 'Sign in', function () use ($isReg
             <div role="alert" class="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"><?= e($error) ?></div>
         <?php endif; ?>
         <?php echo flash_render(); ?>
+
+        <?php if ($googleEnabled): ?>
+        <a href="/account/google"
+           class="mt-6 inline-flex h-12 w-full items-center justify-center gap-3 rounded-full border border-line bg-white font-semibold text-ink transition hover:bg-canvas">
+            <svg viewBox="0 0 48 48" class="h-5 w-5" aria-hidden="true">
+                <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.7 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.2 17.7 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.6-4.8 7.3l7.7 6C43.9 38.1 46.5 31.9 46.5 24.5z"/>
+                <path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-2.9-.8-4.7s.3-3.3.8-4.7l-7.9-6.1C1 16.3 0 20 0 24s1 7.7 2.6 10.8l7.9-6.1z"/>
+                <path fill="#34A853" d="M24 48c6.3 0 11.7-2.1 15.6-5.7l-7.7-6c-2.1 1.4-4.8 2.3-7.9 2.3-6.3 0-11.6-3.7-13.5-9.1l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/>
+            </svg>
+            Continue with Google
+        </a>
+        <div class="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-muted-ink">
+            <span class="h-px flex-1 bg-line"></span> or <span class="h-px flex-1 bg-line"></span>
+        </div>
+        <?php endif; ?>
 
         <form method="post" action="/account?action=<?= $isRegister ? 'register' : 'login' ?>" class="mt-6 space-y-5" novalidate>
             <?= csrf_field() ?>

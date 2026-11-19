@@ -45,23 +45,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         safe_redirect('/admin/settings');
     }
 
-    // save = text settings (store identity, ticker, PostEx).
-    $keys = [
-        'store_name', 'store_email', 'store_phone', 'store_address', 'bank_details', 'cod_fee',
-        'ticker_text', 'ticker_active',
-        'postex_api_token', 'postex_api_base', 'postex_service_type', 'postex_default_weight',
+    // save = one section at a time. Each form posts only its own keys, so map
+    // them explicitly — otherwise saving the ticker would blank PostEx, etc.
+    $formKeys = [
+        'save_store'  => ['store_name', 'store_email', 'store_phone', 'store_address', 'bank_details', 'cod_fee'],
+        'save_ticker' => ['ticker_text', 'ticker_active'],
+        'save_postex' => ['postex_api_token', 'postex_api_base', 'postex_service_type', 'postex_default_weight'],
+        'save_google' => ['google_client_id', 'google_client_secret'],
     ];
-    foreach ($keys as $k) {
-        $val = trim(mb_substr((string)($_POST[$k] ?? ''), 0, 500));
-        // Never overwrite a stored token with blank - blank means "keep existing".
-        if ($k === 'postex_api_token' && $val === '') {
-            continue;
+    if (isset($formKeys[$do])) {
+        $keys = $formKeys[$do];
+        foreach ($keys as $k) {
+            $val = trim(mb_substr((string)($_POST[$k] ?? ''), 0, 500));
+            // Never overwrite a stored secret with blank - blank means "keep existing".
+            if (in_array($k, ['postex_api_token', 'google_client_secret'], true) && $val === '') {
+                continue;
+            }
+            $up->execute([':k' => $k, ':v' => $val]);
         }
-        $up->execute([':k' => $k, ':v' => $val]);
+        audit('settings_updated', 'store_settings', null, null, ['keys' => $keys]);
+        $_SESSION['flash_success'] = 'Settings saved.';
+        safe_redirect('/admin/settings');
     }
-    audit('settings_updated', 'store_settings', null, null, ['keys' => $keys]);
-    $_SESSION['flash_success'] = 'Settings saved.';
-    safe_redirect('/admin/settings');
 }
 
 admin_layout('Settings', function () use ($ADMIN) {
@@ -75,6 +80,7 @@ admin_layout('Settings', function () use ($ADMIN) {
     }
     $logo = $settings['logo_path'] ?? '';
     $tokenStored = ($settings['postex_api_token'] ?? '') !== '';
+    $googleSecretStored = ($settings['google_client_secret'] ?? '') !== '';
 
     admin_flash();
     ?>
@@ -115,7 +121,7 @@ admin_layout('Settings', function () use ($ADMIN) {
         <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
             <h2 class="font-bold">Header ticker <span class="font-normal text-muted-ink">(sliding message on every store page)</span></h2>
             <form method="post" class="mt-4 space-y-4">
-                <input type="hidden" name="do" value="save">
+                <input type="hidden" name="do" value="save_ticker">
                 <?= csrf_field() ?>
                 <div>
                     <label for="ticker_text" class="block text-sm font-semibold">Ticker message</label>
@@ -136,7 +142,7 @@ admin_layout('Settings', function () use ($ADMIN) {
             <h2 class="font-bold">PostEx courier integration</h2>
             <p class="mt-1 text-xs text-muted-ink">Used by the "Book with PostEx" buttons on orders. Get your API token from the PostEx merchant portal.</p>
             <form method="post" class="mt-4 space-y-4">
-                <input type="hidden" name="do" value="save">
+                <input type="hidden" name="do" value="save_postex">
                 <?= csrf_field() ?>
                 <div>
                     <label for="postex_api_token" class="block text-sm font-semibold">API token</label>
@@ -165,9 +171,40 @@ admin_layout('Settings', function () use ($ADMIN) {
             </form>
         </section>
 
+        <!-- Google Sign-In -->
+        <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+            <h2 class="font-bold">Google Sign-In for customers</h2>
+            <p class="mt-1 text-xs text-muted-ink">
+                Lets shoppers sign in with their Google account on the login and register pages.
+                Create OAuth credentials in the
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" class="font-semibold text-accent hover:underline">Google Cloud console</a>
+                and add this exact redirect URI:
+            </p>
+            <p class="mt-2 break-all rounded-xl border border-line bg-canvas/60 px-4 py-3 font-mono text-xs"><?= e(rtrim((string)config('url'), '/') . '/account/google/callback') ?></p>
+            <form method="post" class="mt-4 space-y-4">
+                <input type="hidden" name="do" value="save_google">
+                <?= csrf_field() ?>
+                <div>
+                    <label for="google_client_id" class="block text-sm font-semibold">Client ID</label>
+                    <input id="google_client_id" name="google_client_id" maxlength="500" value="<?= e($settings['google_client_id'] ?? '') ?>" <?= $canEdit ? '' : 'disabled' ?>
+                           placeholder="xxxxxxxx.apps.googleusercontent.com"
+                           class="mt-1.5 h-12 w-full rounded-xl border border-line bg-canvas/60 px-4 font-mono text-xs">
+                </div>
+                <div>
+                    <label for="google_client_secret" class="block text-sm font-semibold">Client secret</label>
+                    <input id="google_client_secret" name="google_client_secret" type="password" maxlength="500" placeholder="<?= $googleSecretStored ? 'Stored - leave blank to keep' : 'Paste the client secret' ?>" <?= $canEdit ? '' : 'disabled' ?>
+                           class="mt-1.5 h-12 w-full rounded-xl border border-line bg-canvas/60 px-4 font-mono text-sm">
+                    <p class="mt-1 text-xs <?= $googleSecretStored ? 'text-success' : 'text-warning' ?>"><?= $googleSecretStored ? 'A client secret is stored.' : 'No secret stored yet - Google sign-in stays hidden until you add one.' ?></p>
+                </div>
+                <?php if ($canEdit): ?>
+                <button type="submit" class="inline-flex h-11 items-center rounded-xl bg-ink px-6 text-sm font-semibold text-white">Save Google settings</button>
+                <?php endif; ?>
+            </form>
+        </section>
+
         <!-- Store identity -->
         <form method="post" class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-            <input type="hidden" name="do" value="save">
+            <input type="hidden" name="do" value="save_store">
             <?= csrf_field() ?>
             <h2 class="font-bold">Store identity</h2>
             <div class="mt-4 grid gap-4 sm:grid-cols-2">

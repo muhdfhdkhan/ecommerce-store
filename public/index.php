@@ -70,6 +70,12 @@ if ($route === null) {
     } elseif (preg_match('~^/page/([a-z0-9]+(?:-[a-z0-9]+)*)$~', $path, $m) === 1) {
         $_GET['cms'] = $m[1];
         $route = ['modules/store/pages/info.php', 'public'];
+    } elseif ($path === '/account/google') {
+        $_GET['action'] = 'google';
+        $route = ['modules/store/pages/account.php', 'private'];
+    } elseif ($path === '/account/google/callback') {
+        $_GET['action'] = 'google_callback';
+        $route = ['modules/store/pages/account.php', 'private'];
     } elseif ($path === '/about') {
         $_GET['which'] = 'about';
         $route = ['modules/store/pages/info.php', 'public'];

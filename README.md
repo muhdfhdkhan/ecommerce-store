@@ -51,7 +51,8 @@ C:\xampp\mysql\bin\mysql.exe -u root patches_motifs -e "SOURCE database/schema.s
 php database/seed.php
 
 # New migration placeholder files go in database/migrations/
-# Applied so far: schema.sql, 002 (seed), 003 (phases 6-8), 004 (SEO + seed)
+# Applied so far: schema.sql, 002 (seed), 003 (phases 6-8), 004 (SEO + seed),
+#                  005 (returns + PostEx), 006 (Google login)
 
 # Automated smoke tests (20 assertions; safe to re-run)
 php tests\smoke.php
@@ -65,6 +66,37 @@ powershell -File scripts\restore.ps1 -DumpFile storage\backups\db_XXXX.sql
 # Regenerate demo imagery (hero slides, product photos, collection cover)
 php database/make_placeholders.php
 ```
+
+## Deploy with the web installer
+
+Upload the project, point the web root at `public/`, then open:
+
+```
+https://your-domain.example/install.php
+```
+
+The installer checks PHP 8.1+, required extensions (`pdo_mysql`, `mbstring`, `fileinfo`,
+`gd`, `curl`, `openssl`) and folder permissions. It then:
+
+1. creates the database if needed (or reuses an empty one),
+2. imports `database/schema.sql` and every `database/migrations/*.sql` in order,
+3. seeds roles, permissions, store defaults and your Super Admin account,
+4. writes `.env` (existing file is backed up as `.env.bak-<timestamp>`),
+5. creates `storage/installed.lock` so it cannot run again.
+
+After a successful install, **delete `public/install.php`**. To re-run the installer,
+delete `storage/installed.lock` on the server first.
+
+## Customer Google sign-in
+
+1. In the [Google Cloud console](https://console.cloud.google.com/apis/credentials) create
+   an **OAuth client ID → Web application**.
+2. Add the authorised redirect URI: `{APP_URL}/account/google/callback`
+   (for local dev: `http://patchesandmotifs.test/account/google/callback`).
+3. In **Admin → Settings → Google Sign-In**, paste the Client ID and Client secret and save.
+4. The "Continue with Google" button appears on the storefront login and register pages.
+   Accounts are linked by verified email; Google-only accounts cannot use password login
+   until they set one.
 
 ## Web server
 

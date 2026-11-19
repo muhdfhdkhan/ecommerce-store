@@ -60,6 +60,7 @@ No website on earth is 100% unhackable. Anyone who promises that is wrong. What 
 36. Pre-Launch Security Checklist
 37. Attack → Defense Quick Reference
 38. Helper Code Library (copy-ready)
+39. Project-Specific Add-ons (installer, Google sign-in, assets)
 
 ---
 
@@ -612,6 +613,19 @@ Signed or random single-use tokens with expiry; no account-sensitive features un
 - Optional IP allow-list or VPN/Cloudflare Access for `/admin`.
 - Change the admin URL path from default guesses *in addition to* — never *instead of* — real authentication.
 - Re-authenticate (password/2FA) before: changing roles, refunds, exporting customer data, changing payment settings.
+
+### 9.6 Google Sign-In for customers (OAuth 2.0 / OpenID Connect)
+
+Customer Google sign-in uses the **authorization-code flow** and is optional per store.
+
+- **Credentials** (`google_client_id`, `google_client_secret`) live in `store_settings`, editable only by admins with `settings.edit`. The secret is never rendered back into the page — a blank field means "keep the stored value".
+- **State parameter**: a 192-bit random token is stored in the session with a 10-minute expiry and compared with `hash_equals()` on callback. This prevents login-CSRF and replay.
+- **Verified email only**: the OpenID `userinfo` response must contain `email_verified === true`; unverified addresses are rejected.
+- **Identity**: the stable Google `sub` is stored in `customers.google_id` (unique). Existing email accounts are linked on first Google sign-in; new accounts get a local row with a random bcrypt hash so password login cannot be used until the customer sets a password.
+- **Session hardening**: `customer_start_session()` regenerates the session ID and rotates the CSRF token after success. The cart is merged into the account.
+- **Minimal scopes**: `openid email profile`. Access tokens are used once to read the profile and are never stored or logged. Only safe OAuth error codes are written to the log.
+- **Redirect URI** must match exactly: `{APP_URL}/account/google/callback`, registered in the Google Cloud console. `APP_URL` therefore must be the final public URL.
+- **Failure UX**: all failures show a generic message and redirect back to `/account`; no token or error detail reaches the browser.
 
 ---
 
@@ -1612,6 +1626,8 @@ Keep an up-to-date list of emergency contacts (developer, host, Cloudflare, paym
 - [ ] Errors hidden from users; detailed errors logged privately
 - [ ] Security headers + CSP active (report-only phase completed)
 - [ ] 2FA enabled for admin accounts
+- [ ] Google sign-in (if enabled): redirect URI exact, secret stored server-side, `email_verified` enforced
+- [ ] `public/install.php` deleted after setup **and** `storage/installed.lock` present
 
 **Infrastructure**
 - [ ] Only `public/` is web root; no `.env`, `.git`, backups, SQL files exposed
@@ -1794,6 +1810,30 @@ login_user((int)$user['id']);
 audit('login_success', 'customer', (int)$user['id']);
 safe_redirect('/account');
 ```
+
+---
+
+## 39. Project-Specific Add-ons
+
+### 39.1 Web installer (`public/install.php`)
+
+- **Runs once.** On success it writes `storage/installed.lock`; every later request shows an "Already installed" page. Re-running requires deleting the lock on the server (a deliberate, privileged action).
+- **No bootstrap.** The installer is intentionally standalone (the app cannot boot before `.env` exists). It uses PDO only — no shell commands, no `exec`, no dynamic includes.
+- **CSRF + escaped output** on its form; errors are shown without secrets and DB errors are logged privately.
+- **Input whitelists**: database name `[A-Za-z0-9_]{1,64}`, port 1–65535, timezone from `timezone_identifiers_list()`, full `http(s)://` app URL.
+- **Schema source is fixed**: only `database/schema.sql` and `database/migrations/*.sql` from the repo are imported, in filename order. User input never becomes SQL text beyond the whitelisted database identifier.
+- **Safe re-runs**: existing Patches&Motifs tables are detected; a reset must be explicitly ticked and only the tables created by this project are dropped (`SET FOREIGN_KEY_CHECKS=0`), leaving unrelated tables untouched.
+- **Secrets**: `.env` is backed up before writing, written with `0600` where supported, and contains a fresh random `APP_KEY`. `SESSION_SECURE_COOKIE` is set automatically from the app URL scheme.
+- **Admin bootstrap**: the installer demands a ≥12-character password and stores it with `password_hash()` (bcrypt cost 12) through the same `seed_database()` used by `database/seed.php`.
+- **Deployment rule**: after a successful install, delete `public/install.php`. Ensure the web root is `public/` so `database/*.sql`, `.env` and the lock file are never web-accessible.
+
+### 39.2 Asset cache-busting
+
+`asset_url()` appends `?v=<filemtime>` to CSS/JS. This fixes stale bundles after deploys. It is not a security control, but it prevents an old, buggy script from running against a newer API contract. Do not defeat it with long-lived query-string stripping proxies.
+
+### 39.3 Uploads execution block
+
+`public/uploads/.htaccess` disables PHP with `php_flag engine off` (valid in `.htaccess`; `php_admin_flag` is not and causes HTTP 500 on every served image). Keep script execution disabled in any other writable directory.
 
 ---
 

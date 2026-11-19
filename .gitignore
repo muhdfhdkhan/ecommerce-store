@@ -1,5 +1,9 @@
 # Secrets & local environment (SECURITY.md §3.2)
 .env
+.env.bak-*
+
+# Installer lock (created per deployment by public/install.php)
+storage/installed.lock
 
 # Dependencies
 node_modules/
