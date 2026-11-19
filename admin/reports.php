@@ -58,9 +58,13 @@ admin_layout('Reports', function () use ($from, $to, $type, $report) {
             <tbody class="divide-y divide-line">
                 <?php foreach ($report['rows'] as $r): ?>
                 <tr>
-                    <?php foreach ($report['columns'] as [$label, $key, $money]): ?>
+                    <?php foreach ($report['columns'] as $col):
+                        $label = (string)($col[0] ?? '');
+                        $key   = (string)($col[1] ?? '');
+                        $money = (bool)($col[2] ?? false);
+                    ?>
                     <td class="px-5 py-2.5 <?= $money ? 'text-right font-semibold tabular-nums' : '' ?>">
-                        <?= $money ? money_fmt(money_to_cents((string)$r[$key])) : e((string)($r[$key] ?? '')) ?>
+                        <?= $money ? money_fmt(money_to_cents((string)($r[$key] ?? 0))) : e((string)($r[$key] ?? '')) ?>
                     </td>
                     <?php endforeach; ?>
                 </tr>
