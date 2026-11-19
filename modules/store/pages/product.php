@@ -42,7 +42,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
     <div class="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-12">
         <!-- Gallery -->
         <div>
-            <div id="main-image" class="aspect-square overflow-hidden rounded-3xl border border-line bg-stone-soft">
+            <div id="main-image" class="aspect-square overflow-hidden rounded-3xl border border-gold/30 bg-stone-soft">
                 <?php if ($images): ?>
                     <img src="/uploads/<?= e($images[0]['file_path']) ?>" alt="<?= e($images[0]['alt_text'] ?: $product['name']) ?>"
                          class="h-full w-full object-cover" decoding="async">
@@ -53,7 +53,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
                     <?php foreach ($images as $i => $img): ?>
                         <button type="button" data-gallery-thumb="/uploads/<?= e($img['file_path']) ?>"
                                 aria-label="View image <?= $i + 1 ?>"
-                                class="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-line bg-stone-soft">
+                                class="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-line bg-stone-soft transition hover:border-gold">
                             <img src="/uploads/<?= e($img['file_path']) ?>" alt="" loading="lazy" class="h-full w-full object-cover">
                         </button>
                     <?php endforeach; ?>
@@ -64,7 +64,8 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
         <!-- Buy panel -->
         <div>
             <h1 class="text-2xl font-bold tracking-tight sm:text-3xl"><?= e($product['name']) ?></h1>
-            <p class="mt-1 text-sm text-muted-ink">SKU: <span class="tabular-nums"><?= e($product['sku']) ?></span></p>
+            <div class="gold-rule mt-3 w-16"></div>
+            <p class="mt-3 text-sm text-muted-ink">SKU: <span class="tabular-nums"><?= e($product['sku']) ?></span></p>
 
             <p class="mt-4 text-2xl font-bold tabular-nums">
                 <?= $fromPrice !== null ? 'From ' . money_fmt(money_to_cents((string)$fromPrice)) : '' ?>
@@ -89,7 +90,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
                                 $label = variant_label((string)$v['sku'], $v['size_label'] ?? null, $v['length_label'] ?? null, $v['color_label'] ?? null);
                                 ?>
                                 <label class="variant-chip inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition
-                                    <?= $out ? 'cursor-not-allowed border-line bg-canvas text-muted-ink line-through' : 'border-line bg-surface hover:border-ink' ?>">
+                                    <?= $out ? 'cursor-not-allowed border-line bg-canvas text-muted-ink line-through' : 'border-line bg-surface hover:border-gold' ?>">
                                     <input type="radio" name="variant_id" value="<?= (int)$v['id'] ?>" data-price="<?= e(number_format($effV, 2, '.', '')) ?>"
                                            data-sku="<?= e($v['sku']) ?>" data-out="<?= $out ? '1' : '0' ?>"
                                            class="sr-only" <?= $i === 0 ? 'checked' : '' ?> <?= $out ? 'disabled' : '' ?>>
@@ -116,7 +117,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
 
                 <div class="sticky bottom-4 z-20 -mx-1 bg-canvas/90 p-1 backdrop-blur sm:static sm:bg-transparent sm:p-0">
                     <button type="submit" <?= $variants ? '' : 'disabled' ?>
-                            class="inline-flex h-13 w-full items-center justify-center rounded-full bg-ink px-6 text-base font-semibold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
+                            class="inline-flex h-13 w-full items-center justify-center rounded-full bg-ink px-6 text-base font-semibold text-white transition hover:bg-gold-deep disabled:cursor-not-allowed disabled:opacity-40"
                             <?= $mto ? 'data-mto="1"' : '' ?>>
                         <?= $mto ? 'Order (made to order)' : 'Add to cart' ?>
                     </button>

@@ -31,6 +31,7 @@ $totalPages = max(1, (int)ceil($result['total'] / $result['per_page']));
 
 store_layout($q !== '' ? "Search: $q" : 'Shop', function () use ($result, $categories, $q, $categoryId, $sort, $onSale, $page, $totalPages) { ?>
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
+    <div class="gold-rule mb-5 w-20"></div>
     <h1 class="text-2xl font-bold tracking-tight sm:text-3xl"><?= $q !== '' ? 'Search results' : 'Shop all' ?></h1>
     <p class="mt-1 text-sm text-muted-ink tabular-nums"><?= (int)$result['total'] ?> product<?= $result['total'] == 1 ? '' : 's' ?></p>
 
@@ -56,7 +57,7 @@ store_layout($q !== '' ? "Search: $q" : 'Shop', function () use ($result, $categ
         <label class="inline-flex h-12 shrink-0 items-center gap-2 rounded-full border border-line bg-surface px-4 text-sm">
             <input type="checkbox" name="sale" value="1" <?= $onSale ? 'checked' : '' ?> class="h-4 w-4 accent-[#30351B]"> On sale
         </label>
-        <button type="submit" class="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-ink px-6 text-sm font-semibold text-white hover:bg-ink/90">Apply</button>
+        <button type="submit" class="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-ink px-6 text-sm font-semibold text-white hover:bg-gold-deep">Apply</button>
     </form>
 
     <?php if (empty($result['items'])): ?>
@@ -73,7 +74,7 @@ store_layout($q !== '' ? "Search: $q" : 'Shop', function () use ($result, $categ
                 $onSaleItem = $eff !== $p['base_price'];
                 $img   = $p['image_path'] !== '' ? '/uploads/' . e($p['image_path']) : null;
                 ?>
-                <article class="group relative overflow-hidden rounded-3xl border border-line bg-surface transition hover:shadow-md">
+                <article class="group relative overflow-hidden rounded-3xl border border-line bg-surface transition hover:border-gold/60 hover:shadow-md">
                     <a href="/product/<?= e($p['slug']) ?>" class="block">
                         <div class="aspect-square overflow-hidden bg-stone-soft">
                             <?php if ($img): ?>
@@ -82,7 +83,7 @@ store_layout($q !== '' ? "Search: $q" : 'Shop', function () use ($result, $categ
                             <?php endif; ?>
                         </div>
                         <div class="p-3 sm:p-4">
-                            <?php if ($onSaleItem): ?><span class="mb-1 inline-block rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">Sale</span><?php endif; ?>
+                            <?php if ($onSaleItem): ?><span class="mb-1 inline-block rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-gold-deep">Sale</span><?php endif; ?>
                             <h3 class="line-clamp-2 min-h-10 text-[15px] font-semibold leading-snug"><?= e($p['name']) ?></h3>
                             <p class="mt-1.5 text-sm font-bold tabular-nums"><?= money_fmt(money_to_cents((string)$eff)) ?>
                                 <?php if ($onSaleItem): ?><s class="ml-1 text-xs font-normal text-muted-ink"><?= money_fmt(money_to_cents((string)$p['base_price'])) ?></s><?php endif; ?>

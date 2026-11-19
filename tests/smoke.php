@@ -128,6 +128,7 @@ if (preg_match('/name="idempotency_key" value="([^"]+)"/', $b, $m) === 1) {
     'coupon_code' => 'WELCOME10',
 ], $cookieJar);
 check('order places successfully', str_contains($b, 'order') && ($s === 200));
+$placed = $b;
 
 // Idempotency: replaying must not duplicate.
 [$s, $b2] = http_post(BASE . '/checkout', [
@@ -138,7 +139,26 @@ check('order places successfully', str_contains($b, 'order') && ($s === 200));
 ], $cookieJar);
 check('idempotency replay does not create a second order', $b2 === $b || !str_contains($b2, 'EMB-'));
 
-// ---- 4. Admin auth + new Phase 6/7 pages ----
+// ---- 4. Public order tracking (two-factor lookup) ----
+$orderNo = '';
+if (preg_match('/EMB-\d{4}-\d{6}/', $placed, $m) === 1) {
+    $orderNo = $m[0];
+}
+[$s, $b] = http_get(BASE . '/track', $cookieJar);
+$trackCsrf = csrf_from($b);
+check('track page returns 200 with lookup form', $s === 200 && str_contains($b, 'Where is my order?'));
+if ($orderNo !== '') {
+    [$s, $b] = http_post(BASE . '/track', [
+        '_csrf' => $trackCsrf, 'order_number' => $orderNo,
+        'contact' => 'smoke@test.example', 'website' => '',
+    ], $cookieJar);
+    check('track finds the order with a matching email', $s === 200
+        && str_contains($b, $orderNo) && str_contains($b, 'Subtotal') && !str_contains($b, 'could not find'));
+} else {
+    check('track finds the order with a matching email', false);
+}
+
+// ---- 5. Admin auth + admin pages ----
 @unlink($adminJar);
 [$s, $b] = http_get(BASE . '/admin/login', $adminJar);
 $csrf = csrf_from($b);
@@ -155,7 +175,8 @@ if (!isset($creds['e'], $creds['p'])) {
     check('admin credentials available in .env', false);
 } else {
     [$s, $b] = http_post(BASE . '/admin/login', ['email' => $creds['e'], 'password' => $creds['p'], '_csrf' => $csrf, 'website' => ''], $adminJar);
-    foreach (['analytics', 'promotions', 'suppliers', 'purchasing', 'banners', 'cms', 'seo', 'reports'] as $page) {
+    foreach (['analytics', 'promotions', 'suppliers', 'purchasing', 'banners', 'cms', 'seo', 'reports',
+              'users', 'activity', 'profile'] as $page) {
         [$s, $b] = http_get(BASE . '/admin/' . $page, $adminJar);
         check("admin/$page 200", $s === 200 && str_contains($b, 'Sign out'));
     }

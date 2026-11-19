@@ -20,6 +20,12 @@
     --color-warning: #A66B16;
     --color-danger: #B33C36;
 
+    /* Champagne gold — storefront luxury accents (never used for admin chrome). */
+    --color-gold: #C8A96A;          /* champagne base: rules, borders, fills */
+    --color-gold-deep: #7E6029;     /* AA-contrast gold for text on light surfaces */
+    --color-gold-soft: #F4EBDB;     /* pale champagne tint for chips and hovers */
+    --color-champagne: #EFE2CC;     /* deeper tint for panels and dividers */
+
     --font-sans: "Manrope", "Inter", ui-sans-serif, system-ui, -apple-system,
                  "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 
@@ -69,6 +75,22 @@
 }
 .admin-sidebar::-webkit-scrollbar-thumb:hover {
     background: #a9a288;
+}
+
+/* Storefront gold details: hairline rules and a soft metallic fill. */
+.gold-rule {
+    background: linear-gradient(90deg, transparent, #c8a96a 35%, #8a6b33 50%, #c8a96a 65%, transparent);
+    height: 2px;
+    border-radius: 9999px;
+}
+.gold-wash {
+    background: linear-gradient(135deg, #faf6ee 0%, #f4ebdb 55%, #efe2cc 100%);
+}
+.gold-text {
+    background: linear-gradient(92deg, #8a6b33 0%, #c8a96a 45%, #8a6b33 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 /* Respect reduced motion (DESIGN.md §13, PROJECT_BRIEF §6.6) */

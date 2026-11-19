@@ -614,6 +614,20 @@ Signed or random single-use tokens with expiry; no account-sensitive features un
 - Change the admin URL path from default guesses *in addition to* — never *instead of* — real authentication.
 - Re-authenticate (password/2FA) before: changing roles, refunds, exporting customer data, changing payment settings.
 
+**Implemented in this build:**
+
+- **Self-service profile** (`/admin/profile`): name, email and password. A password change
+  requires the current password, enforces 12–128 characters (mirrored by the installer and
+  user-management screens), refuses reuse of the current password, re-hashes with bcrypt
+  cost 12, then calls `session_regenerate_id(true)` and `csrf_rotate()`. Both actions are audited.
+- **User management** (`/admin/users`, permission `users.manage`): creates accounts with an
+  explicit built-in role, enables/disables and soft-deletes them, and resets passwords.
+  Non-negotiable guards: you cannot disable or delete your own account, and the **last
+  active `super_admin`** cannot be demoted, disabled or deleted. Emails are checked for
+  uniqueness server-side; a soft-deleted account's email is renamed (`deleted.<id>.<email>`)
+  so it can be reused, with the original kept in the audit trail. Roles are never taken
+  from request data as free text — only from the `roles` table.
+
 ### 9.6 Google Sign-In for customers (OAuth 2.0 / OpenID Connect)
 
 Customer Google sign-in uses the **authorization-code flow** and is optional per store.
@@ -1380,6 +1394,17 @@ GRANT SELECT ON embroidery.* TO 'emb_report'@'10.0.0.%';
 | Security events | CSRF failures, rate-limit hits, WAF blocks, suspicious uploads |
 | Errors | PHP exceptions, DB errors, failed jobs |
 
+**In-app activity log.** `audit()` writes to `activity_logs` (`user_id`, `action`, `entity`,
+`entity_id`, before/after JSON, IP, user agent, UTC time). The admin screen `/admin/activity`
+(`logs.view`) shows that feed with filters and pagination, plus admin sign-in attempts from
+`login_attempts` (`scope = 'admin_login'`). Notable actions: `login_success`, `login_failed`,
+`login_rate_limited`, `login_page_view`, `permission_denied`, `user_created`, `user_updated`,
+`user_enabled`, `user_disabled`, `user_deleted`, `user_password_reset`, `password_changed`,
+`profile_updated`, `settings_updated`, `order_*`, `order_track_failed`. JSON output is
+escaped (`e()`) and never executed; no passwords, hashes, tokens or secrets are recorded.
+`login_page_view` is written once per session per 10 minutes, so the log answers "who opened
+the admin sign-in screen" without recording every reload.
+
 ### 29.2 Log hygiene
 
 - Structured logs (JSON) with timestamp (UTC), request ID, user ID, IP, route.
@@ -1834,6 +1859,24 @@ safe_redirect('/account');
 ### 39.3 Uploads execution block
 
 `public/uploads/.htaccess` disables PHP with `php_flag engine off` (valid in `.htaccess`; `php_admin_flag` is not and causes HTTP 500 on every served image). Keep script execution disabled in any other writable directory.
+
+### 39.4 Admin accounts and the activity log
+
+- **Routes:** `/admin/profile` (any active admin), `/admin/users` (`users.manage`), `/admin/activity` (`logs.view`). Each page starts with `admin_guard.php` and calls `admin_require_permission()` before touching data.
+- **RBAC source of truth** is `includes/rbac.php` (`role_permission_map()`), consumed by `admin_guard.php` at request time and `database/seed_core.php` at install time, so code and database cannot drift. `super_admin` is always a wildcard.
+- **State changes are POST + CSRF only.** Every mutation writes an audit row with before/after values; errors are flashed generically (no SQL or hash detail).
+- **Privilege guards:** self-disable/self-delete blocked; the last active `super_admin` cannot be demoted, disabled or deleted (counted inside the same request, excluding the target row). Role values are validated against the `roles` table.
+- **Soft delete** sets `deleted_at`, `status = 'disabled'` and renames the email to `deleted.<id>.<email>` (≤254 chars) so the address can be reused; the original stays in `before_json`.
+- **Login-screen visits** are recorded as `login_page_view` with a per-session/10-minute throttle rather than as failed attempts, so `login_attempts`-based rate limiting is unaffected.
+
+### 39.5 Public order tracking (`/track`)
+
+- **Two-factor lookup:** the submitted order number must match exactly **and** either the email (case-insensitive) or the phone number (digits only, last 10 digits may match) stored on the order. Only the matching order is loaded — there is no order ID in the URL and no list endpoint.
+- **Enumeration resistance:** failures are recorded in `login_attempts` (`scope = 'order_track'`) and throttled to **10 failures per 15 minutes per IP**; over the limit returns HTTP 429. Every failure shows the same generic message.
+- **CSRF + honeypot** on the form; the route is `private` (noindex, no-cache), so order details are never cached by shared proxies.
+- **Minimal disclosure:** status timeline, items, totals, courier/tracking number and city only. `admin_note`, internal IDs, addresses and payment references are never rendered.
+- **Audit:** successful lookups are counted, failed lookups write `order_track_failed` with the attempted number and the resolved `entity_id` (if any) for support follow-up.
+
 
 ---
 

@@ -38,6 +38,7 @@ require BASE_PATH . '/includes/csrf.php';
 require BASE_PATH . '/includes/database.php';
 require BASE_PATH . '/includes/ratelimit.php';
 require BASE_PATH . '/includes/auth.php';
+require BASE_PATH . '/includes/rbac.php';
 require BASE_PATH . '/includes/uploads.php';
 
 start_secure_session();

@@ -3,6 +3,8 @@
 // Keeps roles, permissions, the Super Admin account and core settings in one place.
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/includes/rbac.php';
+
 if (!defined('SUPER_ADMIN_ROLE')) {
     define('SUPER_ADMIN_ROLE', 'super_admin');
 }
@@ -22,6 +24,8 @@ function seed_permission_list(): array
         'shipping.manage',
         'promotions.manage',
         'cms.manage',
+        'seo.manage',
+        'suppliers.manage', 'purchasing.manage',
         'reports.view', 'reports.export',
         'users.manage',
         'settings.edit',
@@ -44,10 +48,17 @@ function seed_database(PDO $pdo, string $adminEmail, string $adminPassword, stri
     }
 
     // --- roles ---
+    $roleDescriptions = [
+        'super_admin'     => 'Full system access',
+        'store_manager'   => 'Products, orders, inventory, customers, website',
+        'order_manager'   => 'Orders, printing, shipping',
+        'product_manager' => 'Catalog, inventory, suppliers and purchasing',
+        'accountant'      => 'Payments, reports and order visibility',
+    ];
     $st = $pdo->prepare('INSERT IGNORE INTO roles (name, description) VALUES (:name, :d)');
-    $st->execute([':name' => SUPER_ADMIN_ROLE, ':d' => 'Full system access']);
-    $st->execute([':name' => 'store_manager', ':d' => 'Products, orders, inventory, customers']);
-    $st->execute([':name' => 'order_manager', ':d' => 'Orders, printing, shipping']);
+    foreach (role_permission_map() as $roleName => $_) {
+        $st->execute([':name' => $roleName, ':d' => $roleDescriptions[$roleName] ?? '']);
+    }
 
     // --- permissions ---
     $st = $pdo->prepare('INSERT IGNORE INTO permissions (name) VALUES (:name)');
@@ -55,7 +66,21 @@ function seed_database(PDO $pdo, string $adminEmail, string $adminPassword, stri
         $st->execute([':name' => $perm]);
     }
 
-    // --- super_admin holds every permission ---
+    // --- role grants (super_admin is a wildcard in admin_guard) ---
+    $grant = $pdo->prepare(
+        'INSERT IGNORE INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name = :p WHERE r.name = :r'
+    );
+    foreach (role_permission_map() as $roleName => $perms) {
+        if ($roleName === SUPER_ADMIN_ROLE) {
+            continue;
+        }
+        foreach ($perms as $perm) {
+            $grant->execute([':p' => $perm, ':r' => $roleName]);
+        }
+    }
+
+    // super_admin holds every permission (kept for completeness/queries)
     $st = $pdo->prepare('INSERT IGNORE INTO role_permissions (role_id, permission_id)
                          SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.name = :role');
     $st->execute([':role' => SUPER_ADMIN_ROLE]);

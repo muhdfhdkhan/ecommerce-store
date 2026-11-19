@@ -79,6 +79,7 @@ if ($customer !== null && $action !== 'logout') {
         echo flash_render();
         ?>
 <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
+    <div class="gold-rule mb-5 w-20"></div>
     <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Hello, <?= e($customer['name']) ?></h1>
 
     <?php if (!$orders): ?>
@@ -91,8 +92,8 @@ if ($customer !== null && $action !== 'logout') {
     <h2 class="mt-8 font-bold">Your orders</h2>
     <div class="mt-4 space-y-4">
         <?php foreach ($orders as $o):
-            $badge = ['pending_confirmation' => 'bg-warning/10 text-warning', 'delivered' => 'bg-success/10 text-success', 'cancelled' => 'bg-danger/10 text-danger', 'on_hold' => 'bg-warning/10 text-warning'][(string)$o['status']] ?? 'bg-accent-soft text-accent'; ?>
-        <article class="rounded-3xl border border-line bg-surface p-5">
+            $badge = ['pending_confirmation' => 'bg-warning/10 text-warning', 'delivered' => 'bg-success/10 text-success', 'cancelled' => 'bg-danger/10 text-danger', 'on_hold' => 'bg-warning/10 text-warning'][(string)$o['status']] ?? 'bg-gold-soft text-gold-deep'; ?>
+        <article class="rounded-3xl border border-line bg-surface p-5 transition hover:border-gold/50">
             <div class="flex flex-wrap items-center gap-3">
                 <p class="font-bold tabular-nums"><?= e($o['order_number']) ?></p>
                 <span class="rounded-full px-3 py-1 text-xs font-semibold <?= $badge ?>"><?= e(str_replace('_', ' ', (string)$o['status'])) ?></span>
@@ -101,6 +102,8 @@ if ($customer !== null && $action !== 'logout') {
             <p class="mt-1 text-sm text-muted-ink">Placed UTC <?= e(substr((string)$o['placed_at'], 0, 16)) ?> · payment <?= e((string)$o['payment_status']) ?>
                 <?php if (!empty($o['tracking_number'])): ?> · tracking <span class="font-mono"><?= e($o['tracking_number']) ?></span><?php endif; ?>
             </p>
+            <a href="/track?number=<?= e(rawurlencode((string)$o['order_number'])) ?>"
+               class="mt-3 inline-flex h-9 items-center rounded-full border border-gold/50 px-4 text-xs font-semibold text-gold-deep transition hover:bg-gold-soft">Track order &rarr;</a>
         </article>
         <?php endforeach; ?>
     </div>

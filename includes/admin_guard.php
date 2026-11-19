@@ -13,20 +13,11 @@ admin_touch_session();
 /** Permission map per role (PROJECT_BRIEF §19). super_admin = wildcard. */
 function role_permissions_for(string $role): array
 {
-    return match ($role) {
-        'super_admin'    => ['*'],
-        'store_manager'  => ['dashboard.view', 'products.view', 'products.edit', 'categories.view', 'categories.edit',
-                            'collections.view', 'collections.edit', 'inventory.view', 'inventory.adjust',
-                            'orders.view', 'orders.update_status', 'payments.view', 'customers.view', 'customers.edit',
-                            'customers.block', 'reports.view', 'logs.view', 'promotions.manage',
-                            'suppliers.manage', 'purchasing.manage', 'cms.manage', 'seo.manage'],
-        'order_manager'  => ['dashboard.view', 'orders.view', 'orders.update_status', 'payments.view', 'shipping.manage'],
-        'product_manager'=> ['dashboard.view', 'products.view', 'products.edit', 'categories.view', 'categories.edit',
-                            'collections.view', 'collections.edit', 'inventory.view', 'inventory.adjust',
-                            'suppliers.manage', 'purchasing.manage'],
-        'accountant'     => ['dashboard.view', 'payments.view', 'payments.verify', 'orders.view', 'reports.view', 'reports.export'],
-        default          => ['dashboard.view'],
-    };
+    if ($role === SUPER_ADMIN_ROLE) {
+        return ['*'];
+    }
+    $map = role_permission_map();
+    return $map[$role] ?? ['dashboard.view'];
 }
 
 /** Current admin with permissions resolved. */
@@ -76,7 +67,9 @@ function admin_layout(string $title, callable $content): void
     /** @var array $ADMIN */
     global $ADMIN;
     $initial = strtoupper(mb_substr((string)$ADMIN['name'], 0, 1));
-    $role = ucfirst(str_replace('_', ' ', (string)$ADMIN['role']));
+    $role = role_label((string)$ADMIN['role']);
+    $canUsers = admin_user_can($ADMIN, 'users.manage');
+    $canLogs = admin_user_can($ADMIN, 'logs.view');
     ?>
 <!doctype html>
 <html lang="en" class="h-full">
@@ -106,6 +99,7 @@ function admin_layout(string $title, callable $content): void
                 <span class="block text-[11px] text-muted-ink"><?= e($role) ?></span>
             </span>
             <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-full bg-accent font-bold text-white"><?= e($initial) ?></span>
+            <a href="/admin/profile" class="hidden h-11 items-center rounded-full border border-line px-4 text-sm font-semibold hover:bg-canvas sm:inline-flex">My account</a>
             <form method="post" action="/admin/logout">
                 <input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
                 <button type="submit" class="inline-flex h-11 items-center rounded-full border border-line px-4 text-sm font-semibold hover:bg-canvas">Sign out</button>
@@ -139,6 +133,16 @@ function admin_layout(string $title, callable $content): void
             <a href="/admin/cms" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">CMS pages</a>
             <a href="/admin/seo" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">SEO</a>
             <a href="/admin/settings" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Settings</a>
+            <?php if ($canUsers || $canLogs): ?>
+            <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Administration</p>
+            <?php if ($canUsers): ?>
+            <a href="/admin/users" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Users</a>
+            <?php endif; ?>
+            <?php if ($canLogs): ?>
+            <a href="/admin/activity" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Activity log</a>
+            <?php endif; ?>
+            <?php endif; ?>
+            <a href="/admin/profile" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">My account</a>
         </nav>
     </aside>
 

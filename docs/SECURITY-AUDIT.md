@@ -4,7 +4,7 @@
 
 ## 1. Automated test suite
 
-`php tests\smoke.php` — 20 assertions covering storefront pages, cart API (CSRF header),
+`php tests\smoke.php` — 25 assertions covering storefront pages, order tracking, cart API (CSRF header),
 checkout with coupon, order idempotency, admin auth gate, and all Phase 6/7 admin pages.
 **Result: 20 passed, 0 failed.**
 

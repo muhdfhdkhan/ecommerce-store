@@ -24,9 +24,13 @@ business management, website management, production readiness):
   (meta title/description per product/category/page, consumed by the storefront),
   transactional email via `includes/mailer.php` logged to `email_log`
 - Phase 8: `docs/SECURITY-AUDIT.md` (live checks + findings), automated smoke tests
-  (`php tests\smoke.php` — 20 assertions), perf indexes + load-tested
+  (`php tests\smoke.php` — 25 assertions), perf indexes + load-tested
   (523–677 req/s local), backup/restore scripts (`scripts/backup.ps1`,
   `scripts/restore.ps1`, round-trip verified)
+- Admin & CX refresh: self-service admin profile (`/admin/profile`), admin user
+  management (`/admin/users`), full activity log (`/admin/activity`), public order
+  tracking (`/track`), champagne-gold luxury storefront theme, shared RBAC map
+  (`includes/rbac.php`) and two extra roles (Product Manager, Accountant)
 
 ## Run locally (XAMPP)
 
@@ -52,9 +56,9 @@ php database/seed.php
 
 # New migration placeholder files go in database/migrations/
 # Applied so far: schema.sql, 002 (seed), 003 (phases 6-8), 004 (SEO + seed),
-#                  005 (returns + PostEx), 006 (Google login)
+#                  005 (returns + PostEx), 006 (Google login), 007 (admin roles)
 
-# Automated smoke tests (20 assertions; safe to re-run)
+# Automated smoke tests (25 assertions; safe to re-run)
 php tests\smoke.php
 
 # Backup / restore (Phase 8)
@@ -97,6 +101,26 @@ delete `storage/installed.lock` on the server first.
 4. The "Continue with Google" button appears on the storefront login and register pages.
    Accounts are linked by verified email; Google-only accounts cannot use password login
    until they set one.
+
+## Admin team, activity log & order tracking
+
+- **My account** (`/admin/profile`) — every admin can update their own name/email and
+  change their password. Changing a password requires the current one and signs the
+  session in again with a fresh ID and CSRF token.
+- **Users** (`/admin/users`, permission `users.manage`) — create admin accounts, set their
+  role, reset passwords, disable or remove accounts. You cannot disable/delete yourself,
+  and the last active Super Admin is protected. Roles come from `includes/rbac.php`:
+  Super Admin, Store Manager, Product Manager, Order Manager, Accountant.
+- **Activity log** (`/admin/activity`, permission `logs.view`) — tabbed audit trail of
+  everything done in the admin panel (with before/after JSON, admin, IP, time) plus every
+  admin sign-in attempt. Visits to the admin sign-in screen are recorded once per session
+  per 10 minutes as `login_page_view`.
+- **Track order** (`/track`) — customers enter their order number **and** the email or phone
+  used at checkout, so no order details leak to someone who only guesses a number. Lookups
+  are rate limited (10 failures per 15 minutes per IP) and failures are audited.
+
+The storefront is styled with a champagne-gold accent (`gold`, `gold-deep`, `gold-soft`,
+`champagne` tokens in `resources/tailwind/input.css`). The admin panel keeps the olive accent.
 
 ## Web server
 

@@ -27,6 +27,7 @@ $routes = [
     '/checkout'      => ['modules/store/pages/checkout.php',    'private'],
     '/account'       => ['modules/store/pages/account.php',     'private'],
     '/collections'   => ['modules/store/pages/collections.php', 'public'],
+    '/track'         => ['modules/store/pages/track.php',       'private'],
     '/api/cart'      => ['modules/store/api/cart.php',          'private'],
 
     // Admin (each page enforces its own auth via includes/admin_guard.php)
@@ -46,6 +47,9 @@ $routes = [
     '/admin/reports/export'=> ['admin/reports_export.php', 'private'],
     '/admin/settings'      => ['admin/settings.php',   'private'],
     '/admin/shipping'      => ['admin/shipping.php',   'private'],
+    '/admin/profile'       => ['admin/profile.php',    'private'],
+    '/admin/users'         => ['admin/users.php',      'private'],
+    '/admin/activity'      => ['admin/activity.php',   'private'],
     // Phase 6 — business management
     '/admin/analytics'     => ['admin/analytics.php',  'private'],
     '/admin/promotions'    => ['admin/promotions.php', 'private'],

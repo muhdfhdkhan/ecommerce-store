@@ -102,6 +102,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
     }
 } else {
+    // Record the visit (throttled to once per 10 minutes per session) so the
+    // activity log can answer "who opened the admin sign-in screen".
+    if (empty($_SESSION['login_view_logged']) || (time() - (int)$_SESSION['login_view_logged']) > 600) {
+        $_SESSION['login_view_logged'] = time();
+        audit('login_page_view', 'admin_login', null, null, ['screen' => 'admin_login']);
+    }
     mark_form_seen();
 }
 

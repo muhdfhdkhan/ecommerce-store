@@ -55,17 +55,18 @@ function store_layout(string $title, callable $content, array $opts = []): void
         <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
             <a href="/" class="flex items-center gap-2.5" aria-label="<?= e($storeName) ?> home">
                 <?php if ($logo !== ''): ?>
-                    <img src="/uploads/<?= e($logo) ?>" alt="" class="h-9 w-9 rounded-full object-cover">
+                    <img src="/uploads/<?= e($logo) ?>" alt="" class="h-9 w-9 rounded-full object-cover ring-1 ring-gold/50">
                 <?php else: ?>
-                    <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-full bg-ink text-[13px] font-bold tracking-tight text-white">P&amp;M</span>
+                    <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-full bg-ink text-[13px] font-bold tracking-tight text-white ring-1 ring-gold/60">P&amp;M</span>
                 <?php endif; ?>
                 <span class="text-[15px] font-bold tracking-tight">Patches&amp;Motifs</span>
             </a>
             <nav aria-label="Primary" class="ml-6 hidden items-center gap-1 lg:flex">
-                <a href="/shop" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-canvas">Shop</a>
-                <a href="/collections" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-canvas">Collections</a>
-                <a href="/about" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-canvas">About</a>
-                <a href="/contact" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-canvas">Contact</a>
+                <a href="/shop" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-gold-soft hover:text-gold-deep">Shop</a>
+                <a href="/collections" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-gold-soft hover:text-gold-deep">Collections</a>
+                <a href="/about" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-gold-soft hover:text-gold-deep">About</a>
+                <a href="/contact" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-gold-soft hover:text-gold-deep">Contact</a>
+                <a href="/track" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-gold-soft hover:text-gold-deep">Track order</a>
             </nav>
             <div class="ml-auto flex items-center gap-2">
                 <!-- Search: expanding bar (GET /shop) next to the cart button. -->
@@ -77,7 +78,7 @@ function store_layout(string $title, callable $content, array $opts = []): void
                     <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1.2 12.2a1.8 1.8 0 0 1-1.8 1.8H9a1.8 1.8 0 0 1-1.8-1.8L6 7Z"/><path d="M9 7a3 3 0 1 1 6 0"/></svg>
                     <span class="cart-count absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[10px] font-bold text-white tabular-nums" data-cart-count><?= (int)$cartCount ?></span>
                 </a>
-                <a href="/account" class="hidden h-11 items-center rounded-full border border-line px-4 text-sm font-semibold transition hover:bg-canvas sm:inline-flex">Account</a>
+                <a href="/account" class="hidden h-11 items-center rounded-full border border-line px-4 text-sm font-semibold transition hover:border-gold hover:bg-gold-soft hover:text-gold-deep sm:inline-flex">Account</a>
                 <button type="button" data-store-menu-open aria-label="Open menu"
                         class="grid h-11 w-11 place-items-center rounded-full transition hover:bg-canvas lg:hidden">
                     <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -108,6 +109,7 @@ function store_layout(string $title, callable $content, array $opts = []): void
             <a href="/shop" class="block rounded-xl px-3 py-3 hover:bg-canvas">Shop</a>
             <a href="/collections" class="block rounded-xl px-3 py-3 hover:bg-canvas">Collections</a>
             <a href="/account" class="block rounded-xl px-3 py-3 hover:bg-canvas">Account</a>
+            <a href="/track" class="block rounded-xl px-3 py-3 hover:bg-canvas">Track order</a>
             <a href="/about" class="block rounded-xl px-3 py-3 hover:bg-canvas">About</a>
             <a href="/contact" class="block rounded-xl px-3 py-3 hover:bg-canvas">Contact</a>
         </nav>
@@ -127,32 +129,36 @@ function store_layout(string $title, callable $content, array $opts = []): void
     </main>
 
     <footer class="mt-16 bg-ink text-white">
+        <div class="h-px bg-gradient-to-r from-transparent via-gold to-transparent"></div>
         <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
             <div class="grid gap-10 md:grid-cols-4">
                 <div class="md:col-span-2">
                     <span class="text-lg font-bold tracking-tight">Patches&amp;Motifs</span>
                     <p class="mt-3 max-w-sm text-sm text-white/70">Embroidery that makes every detail matter. Patches, motifs and textile embellishments crafted to be noticed.</p>
+                    <a href="/track" class="mt-5 inline-flex h-10 items-center rounded-full border border-gold/60 px-5 text-sm font-semibold text-gold transition hover:bg-gold hover:text-ink">Track your order</a>
                 </div>
                 <div>
-                    <p class="text-sm font-semibold text-white/90">Shop</p>
+                    <p class="text-sm font-semibold uppercase tracking-[0.16em] text-gold">Shop</p>
                     <ul class="mt-3 space-y-2 text-sm text-white/70">
-                        <li><a href="/shop" class="hover:text-white">All products</a></li>
-                        <li><a href="/collections" class="hover:text-white">Collections</a></li>
-                        <li><a href="/cart" class="hover:text-white">Cart</a></li>
+                        <li><a href="/shop" class="hover:text-gold">All products</a></li>
+                        <li><a href="/collections" class="hover:text-gold">Collections</a></li>
+                        <li><a href="/cart" class="hover:text-gold">Cart</a></li>
                     </ul>
                 </div>
                 <div>
-                    <p class="text-sm font-semibold text-white/90">Support</p>
+                    <p class="text-sm font-semibold uppercase tracking-[0.16em] text-gold">Support</p>
                     <ul class="mt-3 space-y-2 text-sm text-white/70">
-                        <li><a href="/contact" class="hover:text-white">Contact us</a></li>
-                        <li><a href="/page/shipping-policy" class="hover:text-white">Shipping</a></li>
-                        <li><a href="/page/returns-policy" class="hover:text-white">Returns</a></li>
-                        <li><a href="/page/privacy-policy" class="hover:text-white">Privacy</a></li>
+                        <li><a href="/track" class="hover:text-gold">Track an order</a></li>
+                        <li><a href="/contact" class="hover:text-gold">Contact us</a></li>
+                        <li><a href="/page/shipping-policy" class="hover:text-gold">Shipping</a></li>
+                        <li><a href="/page/returns-policy" class="hover:text-gold">Returns</a></li>
+                        <li><a href="/page/privacy-policy" class="hover:text-gold">Privacy</a></li>
                     </ul>
                 </div>
             </div>
-            <div class="mt-10 border-t border-white/15 pt-6 text-xs text-white/50">
-                &copy; <?= e(gmdate('Y')) ?> Patches&amp;Motifs. All rights reserved.
+            <div class="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-gold/25 pt-6 text-xs text-white/50">
+                <span>&copy; <?= e(gmdate('Y')) ?> Patches&amp;Motifs. All rights reserved.</span>
+                <span class="tracking-[0.18em] uppercase text-gold/70">Crafted in Pakistan</span>
             </div>
         </div>
     </footer>

@@ -51,11 +51,17 @@ The reference is a direction, not a pixel-perfect template. The product catalog 
 | Dark panel | `#111210` | Deals and footer |
 | Accent | `#C7D84A` | Small highlights, sale markers and focus details |
 | Accent dark | `#30351B` | Accent text on pale accent |
+| Champagne gold | `#C8A96A` | Storefront luxury accent: rules, rings, borders, newsletter and footer details |
+| Gold deep | `#7E6029` | Gold text on light surfaces (AA contrast); hover states |
+| Gold soft | `#F4EBDB` | Pale champagne chips, hovers and status panels |
+| Champagne | `#EFE2CC` | Deeper champagne tint for panels/dividers |
 | Success | `#26734A` | Success states |
 | Warning | `#A66B16` | Pending/warning states |
 | Danger | `#B33C36` | Errors/destructive actions |
 
 Use accent sparingly. Product imagery should provide most of the color. Ensure text contrast is accessible; never use pale accent text on white for important information.
+
+Champagne gold is the storefront's luxury accent (`gold`, `gold-deep`, `gold-soft`, `champagne` in `resources/tailwind/input.css`). Keep it to hairlines, 1px rings, eyebrow labels, price highlights on dark panels, hover borders and the footer — never large gold fills behind body text. Gold on dark panels uses `gold`; gold on light surfaces must use `gold-deep`. The admin panel keeps the olive `accent` palette and does not use gold.
 
 # 4. Typography
 
@@ -280,6 +286,15 @@ Status chips must pair color with text:
 - Cancelled.
 - On hold.
 
+## Order tracking page (`/track`)
+
+- One focused card: order number + email/phone, POST with CSRF, one primary button. Say plainly that both details must match.
+- No account required. Link it from the header, mobile drawer, footer ("Track your order") and from each order card in the account area.
+- Result header uses the champagne-gold tint with the order number and a status chip. Below it a five-step progress row (Pending → Confirmed → Prepared → Dispatched → Delivered), then delivery details, courier/tracking number, newest-first updates, item list and totals.
+- Terminal states (cancelled, returned, on hold) replace the progress row with one sentence and a danger/warning chip — never show delivered ticks.
+- Empty state: three short steps (Confirm, Prepare, Deliver) so the page is useful before a lookup.
+- Mobile: the progress row becomes five compact items; all panels stack to one column.
+
 # 11. Admin Design Direction
 
 The admin portal should share typography and neutral brand tokens, but prioritize density, clarity and speed over the editorial storefront aesthetic.
@@ -325,6 +340,13 @@ Top bar:
 - Notification indicator.
 - Help link.
 - User menu.
+
+Administration group (permission-gated, shown above "My account"):
+- Users — admin accounts, role, status, password reset (`users.manage`).
+- Activity log — two tabs (Admin actions, Sign-in attempts) with search, admin, date filters and pagination (`logs.view`).
+- My account — profile and password for the signed-in admin (everyone).
+
+`/admin/users` uses expandable rows ("Manage account") instead of a separate edit page: summary line (avatar initial, name, email, role chip, status chip, last sign-in) plus an inline details panel with a details form and a password-reset form. Destructive buttons are outlined in danger and never hidden behind icons. Sensitive actions are text buttons so they stay obvious on touch.
 
 ## Dashboard
 KPI cards:
