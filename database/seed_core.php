@@ -36,14 +36,19 @@ function seed_permission_list(): array
 /**
  * Seed roles, permissions, the Super Admin user and store defaults.
  * Idempotent: safe to run against an existing database. Caller owns the transaction.
+ *
+ * $adminPassword may be null/'' to keep the existing hash — that is only valid
+ * when the account already exists (used by the installer's reconfiguration mode).
+ * $store accepts store_name, store_email, store_phone, store_address, currency
+ * and timezone; keys that are absent keep their current/default value.
  */
-function seed_database(PDO $pdo, string $adminEmail, string $adminPassword, string $adminName = 'Administrator'): void
+function seed_database(PDO $pdo, string $adminEmail, ?string $adminPassword, string $adminName = 'Administrator', array $store = []): void
 {
     $adminEmail = strtolower(trim($adminEmail));
-    if ($adminEmail === '' || $adminPassword === '') {
-        throw new RuntimeException('Admin email and password are required.');
+    if ($adminEmail === '') {
+        throw new RuntimeException('Admin email is required.');
     }
-    if (strlen($adminPassword) < 12) {
+    if ($adminPassword !== null && $adminPassword !== '' && strlen($adminPassword) < 12) {
         throw new RuntimeException('Admin password must be at least 12 characters.');
     }
 
@@ -86,13 +91,25 @@ function seed_database(PDO $pdo, string $adminEmail, string $adminPassword, stri
     $st->execute([':role' => SUPER_ADMIN_ROLE]);
 
     // --- Super Admin account ---
-    $hash = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-    $st = $pdo->prepare(
-        'INSERT INTO users (name, email, password_hash, status)
-         VALUES (:name, :email, :hash, :status)
-         ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), status = VALUES(status), deleted_at = NULL'
-    );
-    $st->execute([':name' => $adminName, ':email' => $adminEmail, ':hash' => $hash, ':status' => 'active']);
+    if ($adminPassword === null || $adminPassword === '') {
+        $exists = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
+        $exists->execute([':email' => $adminEmail]);
+        if ($exists->fetchColumn() === false) {
+            throw new RuntimeException('A password is required to create a new admin account.');
+        }
+        $st = $pdo->prepare(
+            'UPDATE users SET name = :name, status = :status, deleted_at = NULL WHERE email = :email'
+        );
+        $st->execute([':name' => $adminName, ':email' => $adminEmail, ':status' => 'active']);
+    } else {
+        $hash = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+        $st = $pdo->prepare(
+            'INSERT INTO users (name, email, password_hash, status)
+             VALUES (:name, :email, :hash, :status)
+             ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), status = VALUES(status), deleted_at = NULL'
+        );
+        $st->execute([':name' => $adminName, ':email' => $adminEmail, ':hash' => $hash, ':status' => 'active']);
+    }
 
     $st = $pdo->prepare(
         'INSERT IGNORE INTO user_roles (user_id, role_id)
@@ -101,11 +118,18 @@ function seed_database(PDO $pdo, string $adminEmail, string $adminPassword, stri
     $st->execute([':email' => $adminEmail, ':role' => SUPER_ADMIN_ROLE]);
 
     // --- store identity ---
+    $settings = array_merge([
+        'store_name' => 'Patches&Motifs',
+        'currency'   => 'PKR',
+        'timezone'   => 'Asia/Karachi',
+    ], $store);
     $st = $pdo->prepare(
         'INSERT INTO store_settings (setting_key, setting_value) VALUES (:k, :v)
          ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
     );
-    $st->execute([':k' => 'store_name', ':v' => 'Patches&Motifs']);
-    $st->execute([':k' => 'currency', ':v' => 'PKR']);
-    $st->execute([':k' => 'timezone', ':v' => 'Asia/Karachi']);
+    foreach (['store_name', 'store_email', 'store_phone', 'store_address', 'currency', 'timezone'] as $key) {
+        if (array_key_exists($key, $settings)) {
+            $st->execute([':k' => $key, ':v' => (string)$settings[$key]]);
+        }
+    }
 }

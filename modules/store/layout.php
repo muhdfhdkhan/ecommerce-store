@@ -10,14 +10,17 @@ function store_layout(string $title, callable $content, array $opts = []): void
     /** @var string $CSP_NONCE */
     global $CSP_NONCE;
     $cartCount = cart_view()['count'] ?? 0;
-    $storeName = 'Patches&Motifs';
     $headerCompact = $opts['compact_header'] ?? false;
 
     // Brand + ticker settings (single query; missing keys fall back below).
     $brand = db()->query(
         "SELECT setting_key, setting_value FROM store_settings
-         WHERE setting_key IN ('logo_path','ticker_text','ticker_active')"
+         WHERE setting_key IN ('store_name','logo_path','ticker_text','ticker_active')"
     )->fetchAll(PDO::FETCH_KEY_PAIR);
+    $storeName = trim((string)($brand['store_name'] ?? ''));
+    if ($storeName === '') {
+        $storeName = 'Patches&Motifs';
+    }
     $logo = trim((string)($brand['logo_path'] ?? ''));
     $tickerActive = ($brand['ticker_active'] ?? '1') === '1';
     $tickerText = trim((string)($brand['ticker_text'] ?? ''));
@@ -59,7 +62,7 @@ function store_layout(string $title, callable $content, array $opts = []): void
                 <?php else: ?>
                     <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-full bg-ink text-[13px] font-bold tracking-tight text-white ring-1 ring-gold/60">P&amp;M</span>
                 <?php endif; ?>
-                <span class="text-[15px] font-bold tracking-tight">Patches&amp;Motifs</span>
+                <span class="text-[15px] font-bold tracking-tight"><?= e($storeName) ?></span>
             </a>
             <nav aria-label="Primary" class="ml-6 hidden items-center gap-1 lg:flex">
                 <a href="/shop" class="rounded-full px-4 py-2 text-sm font-medium text-ink transition hover:bg-gold-soft hover:text-gold-deep">Shop</a>
@@ -133,7 +136,7 @@ function store_layout(string $title, callable $content, array $opts = []): void
         <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
             <div class="grid gap-10 md:grid-cols-4">
                 <div class="md:col-span-2">
-                    <span class="text-lg font-bold tracking-tight">Patches&amp;Motifs</span>
+                    <span class="text-lg font-bold tracking-tight"><?= e($storeName) ?></span>
                     <p class="mt-3 max-w-sm text-sm text-white/70">Embroidery that makes every detail matter. Patches, motifs and textile embellishments crafted to be noticed.</p>
                     <a href="/track" class="mt-5 inline-flex h-10 items-center rounded-full border border-gold/60 px-5 text-sm font-semibold text-gold transition hover:bg-gold hover:text-ink">Track your order</a>
                 </div>
@@ -157,7 +160,7 @@ function store_layout(string $title, callable $content, array $opts = []): void
                 </div>
             </div>
             <div class="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-gold/25 pt-6 text-xs text-white/50">
-                <span>&copy; <?= e(gmdate('Y')) ?> Patches&amp;Motifs. All rights reserved.</span>
+                <span>&copy; <?= e(gmdate('Y')) ?> <?= e($storeName) ?>. All rights reserved.</span>
                 <span class="tracking-[0.18em] uppercase text-gold/70">Crafted in Pakistan</span>
             </div>
         </div>

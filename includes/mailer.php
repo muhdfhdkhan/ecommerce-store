@@ -5,6 +5,31 @@
 declare(strict_types=1);
 
 /**
+ * Brand name for outgoing mail. Reads store_settings.store_name so a rename in
+ * the installer/admin applies to emails too. Header values are stripped of CR/LF
+ * to prevent header injection.
+ */
+function mailer_brand_name(): string
+{
+    static $name = null;
+    if ($name === null) {
+        $name = (string)config('mail.from_name', 'Patches&Motifs');
+        try {
+            $st = db()->prepare("SELECT setting_value FROM store_settings WHERE setting_key = 'store_name' LIMIT 1");
+            $st->execute();
+            $stored = trim((string)$st->fetchColumn());
+            if ($stored !== '') {
+                $name = $stored;
+            }
+        } catch (Throwable $e) {
+            // Keep the configured/default name if settings are unavailable.
+        }
+    }
+    $clean = trim((string)preg_replace('/[\r\n\0]+/', ' ', $name));
+    return $clean !== '' ? $clean : 'Patches&Motifs';
+}
+
+/**
  * Queue + attempt to send a notification email.
  * All content is escaped on render; body is plain text.
  */
@@ -16,7 +41,7 @@ function mailer_send(string $toEmail, string $subject, string $body, string $eve
     }
     $subject = mb_substr($subject, 0, 200);
     $fromEmail = (string)config('mail.from_email', 'store@patchesandmotifs.test');
-    $fromName  = (string)config('mail.from_name', 'Patches&Motifs');
+    $fromName  = mailer_brand_name();
 
     $headers = implode("\r\n", [
         'From: ' . $fromName . ' <' . $fromEmail . '>',
@@ -63,7 +88,7 @@ function mailer_order_confirmation(array $order, array $items): void
         . ($order['discount_total'] > 0 ? "Discount: -Rs " . number_format((float)$order['discount_total'], 0) . "\n" : '')
         . "Total: Rs " . number_format((float)$order['grand_total'], 0) . " ({$order['payment_method']})\n\n"
         . "We will contact you shortly to confirm. Track your order any time from your account.\n\n"
-        . "— Patches&Motifs";
+        . "— " . mailer_brand_name();
 
     mailer_send((string)$order['email'], 'Your order ' . $order['order_number'] . ' is received', $body, 'order_placed', (int)$order['id']);
 }
@@ -81,6 +106,6 @@ function mailer_order_status(string $toEmail, string $orderNumber, int $orderId,
         'returned' => 'has been returned - we are processing it',
     ];
     $msg = $friendly[$status] ?? 'was updated';
-    $body = "Your order {$orderNumber} {$msg}.\n\nTrack it from your account.\n\n— Patches&Motifs";
+    $body = "Your order {$orderNumber} {$msg}.\n\nTrack it from your account.\n\n— " . mailer_brand_name();
     mailer_send($toEmail, "Order {$orderNumber} update", $body, 'order_status', $orderId);
 }

@@ -31,6 +31,8 @@ function activity_label(string $action): string
         'po_receive' => 'Purchase order received',
         'cms_saved'  => 'CMS page saved',
         'seo_saved'  => 'SEO settings saved',
+        'installer_installed'    => 'Site installed with the web installer',
+        'installer_reconfigured' => 'Site reconfigured with the web installer',
     ];
     if (isset($special[$action])) {
         return $special[$action];

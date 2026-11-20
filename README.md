@@ -84,12 +84,40 @@ The installer checks PHP 8.1+, required extensions (`pdo_mysql`, `mbstring`, `fi
 
 1. creates the database if needed (or reuses an empty one),
 2. imports `database/schema.sql` and every `database/migrations/*.sql` in order,
-3. seeds roles, permissions, store defaults and your Super Admin account,
-4. writes `.env` (existing file is backed up as `.env.bak-<timestamp>`),
-5. creates `storage/installed.lock` so it cannot run again.
+3. seeds roles, permissions and your Super Admin account,
+4. applies the store identity — name, contact email/phone, address and timezone — to
+   `store_settings` (the storefront header/footer/titles and outgoing email branding
+   read the name from here),
+5. writes `.env` with the public origin (no subfolder — the app uses root-relative
+   links), database credentials, timezone, session cookie policy and admin seed values.
+   An existing `.env` is backed up as `.env.bak-<timestamp>`; `APP_KEY` and any keys
+   the installer does not manage are preserved,
+6. creates `storage/installed.lock`.
 
-After a successful install, **delete `public/install.php`**. To re-run the installer,
-delete `storage/installed.lock` on the server first.
+### Reconfigure a live site
+
+Open `/install.php` again. The form is pre-filled from the current `.env` and database,
+and submitting it changes everything in one pass: the public URL (Google redirects are
+derived from it), database host/port/name/user/password, store identity, timezone and
+Super Admin email/name/password. `SESSION_SECURE_COOKIE` follows the URL scheme.
+
+- Reconfiguration requires a **current Super Admin email and password**, verified
+  against the existing database before anything is modified (5 failures pauses attempts
+  for 15 minutes).
+- Leave the **database password blank** to keep the current one — it is never printed
+  back into the page. Leave the **admin password blank** to keep the existing hash.
+- **Apply this to the current primary Super Admin** renames the oldest active Super
+  Admin when the email changes instead of creating a second account.
+- Existing tables and data are kept by default. **Reset** is a separate, destructive
+  opt-in that drops only the tables created by Patches&Motifs.
+
+If the current database is unreachable (for example its MySQL password changed), delete
+`storage/installed.lock` on the server, reload the page, enter the new credentials and
+tick **Keep existing Patches&Motifs data**. The tables are not touched; `.env` and the
+store settings are updated.
+
+After a successful install or reconfiguration, **delete `public/install.php`** and keep
+`storage/installed.lock` in place.
 
 ## Customer Google sign-in
 

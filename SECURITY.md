@@ -1842,15 +1842,19 @@ safe_redirect('/account');
 
 ### 39.1 Web installer (`public/install.php`)
 
-- **Runs once.** On success it writes `storage/installed.lock`; every later request shows an "Already installed" page. Re-running requires deleting the lock on the server (a deliberate, privileged action).
+- **Fresh install vs. reconfiguration.** No lock file means fresh install: the database is created, schema/migrations imported and the Super Admin seeded. An existing lock puts the page into reconfiguration mode, which updates the URL, database credentials, store identity and admin account in place.
+- **Reconfiguration is Super Admin gated.** The operator must supply a current active Super Admin email and password, verified with `password_verify()` against the existing `.env` database *before* any change is made. Five failures pause authorization for 15 minutes (`install_auth_fails` / `install_auth_until` in the installer session), and the form also requires an explicit confirmation checkbox. The response does not reveal whether an email exists.
+- **Recovery is a server-side action.** If the existing database cannot be reached (for example the MySQL password changed), the documented path is deleting `storage/installed.lock` with filesystem access. That deliberately bypasses the in-app gate, so an attacker who can only reach the URL cannot take over a live store.
 - **No bootstrap.** The installer is intentionally standalone (the app cannot boot before `.env` exists). It uses PDO only — no shell commands, no `exec`, no dynamic includes.
-- **CSRF + escaped output** on its form; errors are shown without secrets and DB errors are logged privately.
-- **Input whitelists**: database name `[A-Za-z0-9_]{1,64}`, port 1–65535, timezone from `timezone_identifiers_list()`, full `http(s)://` app URL.
-- **Schema source is fixed**: only `database/schema.sql` and `database/migrations/*.sql` from the repo are imported, in filename order. User input never becomes SQL text beyond the whitelisted database identifier.
-- **Safe re-runs**: existing Patches&Motifs tables are detected; a reset must be explicitly ticked and only the tables created by this project are dropped (`SET FOREIGN_KEY_CHECKS=0`), leaving unrelated tables untouched.
-- **Secrets**: `.env` is backed up before writing, written with `0600` where supported, and contains a fresh random `APP_KEY`. `SESSION_SECURE_COOKIE` is set automatically from the app URL scheme.
-- **Admin bootstrap**: the installer demands a ≥12-character password and stores it with `password_hash()` (bcrypt cost 12) through the same `seed_database()` used by `database/seed.php`.
-- **Deployment rule**: after a successful install, delete `public/install.php`. Ensure the web root is `public/` so `database/*.sql`, `.env` and the lock file are never web-accessible.
+- **CSRF + escaped output** on its form; errors are shown without secrets and DB errors are logged privately to `storage/logs/install.log` (never including passwords). The page sends `no-store` and `noindex`.
+- **No secret echo.** Database and admin password fields are never pre-filled. A blank database password keeps the existing value during reconfiguration; a blank admin password keeps the existing hash.
+- **Input whitelists**: database name `[A-Za-z0-9_]{1,64}`, database host `[A-Za-z0-9._\-:\[\]]+`, port 1–65535, timezone from `timezone_identifiers_list()`, full `http(s)://` app origin (no path, since the app uses root-relative links), validated store email, length-capped store/administrator fields. Newlines are rejected so a value cannot inject additional `.env` keys.
+- **Schema source is fixed**: only `database/schema.sql` and `database/migrations/*.sql` from the repo are imported, in filename order, and only into an empty database. User input never becomes SQL text beyond the whitelisted database identifier.
+- **Data is kept by default.** On an existing database, reconfiguration and the explicit “keep existing data” path do not run DDL or drop tables. A reset must be separately ticked; it drops only the tables created by this project (`SET FOREIGN_KEY_CHECKS=0`), leaving unrelated tables untouched.
+- **Secrets**: `.env` is backed up before writing, written with `0600` where supported, and preserves the existing `APP_KEY` and any keys the installer does not manage. A new random key is generated only when none exists. `SESSION_SECURE_COOKIE` is set automatically from the app URL scheme.
+- **Admin bootstrap**: new accounts require a ≥12-character password stored with `password_hash()` (bcrypt cost 12) through the same `seed_database()` used by `database/seed.php`. Reconfiguration may omit the password to keep the current hash, but a new email always requires a new password.
+- **Audit trail**: successful installs and reconfigurations write `installer_installed` / `installer_reconfigured` to `activity_logs` with the URL, database name and mode (no credentials).
+- **Deployment rule**: after a successful install or reconfiguration, delete `public/install.php` and keep `storage/installed.lock`. Ensure the web root is `public/` so `database/*.sql`, `.env` and the lock file are never web-accessible.
 
 ### 39.2 Asset cache-busting
 
