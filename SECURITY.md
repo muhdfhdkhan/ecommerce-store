@@ -806,6 +806,31 @@ header('Content-Disposition: attachment; filename="receipt.pdf"');
 readfile(STORAGE_PATH . '/private/' . basename($row['file_path']));
 ```
 
+### 12.3 CSV product import (`includes/product_import.php`)
+
+The admin CSV importer treats the file and the editable preview as untrusted input:
+
+- **Upload gate:** `.csv` extension, 2 MB cap, `is_uploaded_file()` and a `finfo`
+  MIME allow-list. Parsed with `fgetcsv()` — no `eval`, no spreadsheet macros.
+- **Bounded:** maximum 100 data rows; every field is trimmed, length-capped and
+  validated before use. Comma, semicolon and tab delimiters are supported; a UTF-8 BOM
+  is ignored.
+- **Preview is not trusted:** rows are kept in the session, but names, SKUs, prices,
+  stock, status and category IDs are re-validated on save. Category IDs must belong to
+  an active category.
+- **Uniqueness:** product SKUs, variant SKUs and slugs are checked against the database
+  and earlier rows. Duplicates are flagged and skipped, never silently overwritten.
+- **Transactions:** each row is inserted in its own transaction (product → first variant
+  → inventory → stock movement). Uploaded image files are deleted if the transaction
+  rolls back.
+- **Images:** reuse the hardened `image_upload_store()` pipeline (content MIME, GD
+  re-encode, random name, 5 MB / 6000 px cap, max 8 per row). PHP's `max_file_uploads`
+  caps the number of files per request.
+- **Audit:** each product writes `product_imported`; the batch writes `products_imported`
+  with created/skipped/image counts (never secrets).
+- **CSRF + RBAC:** both the upload and save POSTs require the CSRF token and the
+  `products.edit` permission.
+
 ---
 
 ## 13. File System Attacks — Path Traversal, LFI, RFI
@@ -1147,6 +1172,11 @@ send_security_headers($CSP_NONCE);
 ```
 
 Use the nonce in templates: `<script nonce="<?= e($CSP_NONCE) ?>">…</script>`. Avoid `'unsafe-inline'` and `'unsafe-eval'`. Start with `Content-Security-Policy-Report-Only` while tuning, then enforce.
+
+Because this policy uses `style-src 'self'`, **never use inline `<style>` blocks or
+`style=""` attributes** — they are silently dropped by the browser. Print layouts such as
+`admin/orders_print.php` load external same-origin stylesheets
+(`public/assets/css/print.css` and `print-single.css`) instead.
 
 ### 23.2 Header meaning
 

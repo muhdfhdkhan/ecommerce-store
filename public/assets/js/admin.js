@@ -94,4 +94,37 @@ document.querySelector('[data-bulk-print]')?.addEventListener('click', () => {
   window.open('/admin/orders/print?ids=' + ids.join(',') + '&autoprint=1', '_blank', 'noopener');
 });
 
-// Print sheet page: auto-print requested via ?autoprint=1 is handled in print.js.
+// ---- CSV product import ----
+// Choosing a CSV immediately uploads it and opens the preview page.
+const csvInput = document.querySelector('[data-import-file]');
+if (csvInput) {
+  csvInput.addEventListener('change', () => {
+    if (csvInput.files && csvInput.files.length > 0) {
+      csvInput.closest('form')?.requestSubmit();
+    }
+  });
+}
+
+// Per-row image thumbnails inside the CSV preview (scoped to that row only).
+for (const input of document.querySelectorAll('[data-import-images]')) {
+  input.addEventListener('change', () => {
+    const box = input.closest('[data-import-row]')?.querySelector('[data-import-preview]');
+    if (!box) return;
+    box.replaceChildren();
+    for (const file of Array.from(input.files).slice(0, 8)) {
+      if (!file.type.startsWith('image/')) continue;
+      const img = document.createElement('img');
+      img.alt = file.name;
+      img.className = 'h-16 w-16 rounded-xl border border-line object-cover';
+      const reader = new FileReader();
+      reader.onload = () => { img.src = String(reader.result); };
+      reader.readAsDataURL(file);
+      box.appendChild(img);
+    }
+  });
+}
+
+// The import preview is an overlay; keep the page behind it still.
+if (document.querySelector('[role="dialog"][aria-labelledby="import-title"]')) {
+  document.body.classList.add('overflow-hidden');
+}

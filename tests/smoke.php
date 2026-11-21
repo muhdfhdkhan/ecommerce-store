@@ -183,6 +183,17 @@ if (!isset($creds['e'], $creds['p'])) {
     // Unauthenticated access must bounce to login.
     [$s, $b] = http_get(BASE . '/admin/products', $cookieJar);
     check('guest cannot open admin (no Sign out)', !str_contains($b, 'Sign out'));
+
+    // ---- 6. CSV import UI + print assets ----
+    [$s, $b] = http_get(BASE . '/admin/products', $adminJar);
+    check('products page offers CSV import', $s === 200 && str_contains($b, 'Upload product via CSV'));
+
+    [$s, $b] = http_get(BASE . '/admin/products?action=import_sample', $adminJar);
+    check('sample CSV downloads with headers', $s === 200 && str_contains($b, 'name,sku,price'));
+
+    [$s, $b] = http_get(BASE . '/admin/orders/print?ids=1', $adminJar);
+    check('single print uses portrait stylesheet', $s === 200
+        && str_contains($b, 'print.css') && str_contains($b, 'print-single.css'));
 }
 
 echo "\n$pass passed, $fail failed\n";

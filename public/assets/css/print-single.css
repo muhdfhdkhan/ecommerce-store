@@ -1,0 +1,82 @@
+/* ------------------------------------------------------------------
+   Single dispatch sheet — A4 portrait.
+   Loaded after print.css, which supplies the shared base styles.
+   ------------------------------------------------------------------ */
+
+@page {
+    size: A4 portrait;
+    margin: 14mm 16mm;
+}
+
+body {
+    background: #eceae4;
+}
+
+/* A single order gets a narrower, more readable sheet. */
+.sheet--single {
+    max-width: 186mm;
+    padding: 12mm 14mm;
+    font-size: 12.5px;
+}
+
+.sheet--single .sheet-head {
+    align-items: flex-start;
+    padding-bottom: 10px;
+}
+
+.sheet--single .brand {
+    font-size: 20px;
+}
+
+.sheet--single .order-no strong {
+    font-size: 18px;
+}
+
+.sheet--single .cols {
+    flex-direction: column;
+    gap: 5mm;
+    margin-top: 14px;
+}
+
+.sheet--single .col {
+    padding: 8px 10px;
+    border: 1px solid #e3e4de;
+    border-radius: 6px;
+    background: #fafaf7;
+}
+
+.sheet--single table.items {
+    margin-top: 14px;
+}
+
+.sheet--single table.items th,
+.sheet--single table.items td {
+    padding: 7px 9px;
+    font-size: 12px;
+}
+
+.sheet--single .totals {
+    margin-top: 12px;
+}
+
+.sheet--single .totals dl {
+    min-width: 250px;
+    font-size: 12.5px;
+}
+
+@media print {
+    body {
+        background: #fff;
+    }
+
+    .sheet--single {
+        max-width: none;
+        padding: 0;
+    }
+
+    .sheet--single .col {
+        background: #fff;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}

@@ -24,7 +24,7 @@ business management, website management, production readiness):
   (meta title/description per product/category/page, consumed by the storefront),
   transactional email via `includes/mailer.php` logged to `email_log`
 - Phase 8: `docs/SECURITY-AUDIT.md` (live checks + findings), automated smoke tests
-  (`php tests\smoke.php` — 25 assertions), perf indexes + load-tested
+  (`php tests\smoke.php` — 28 assertions), perf indexes + load-tested
   (523–677 req/s local), backup/restore scripts (`scripts/backup.ps1`,
   `scripts/restore.ps1`, round-trip verified)
 - Admin & CX refresh: self-service admin profile (`/admin/profile`), admin user
@@ -58,7 +58,7 @@ php database/seed.php
 # Applied so far: schema.sql, 002 (seed), 003 (phases 6-8), 004 (SEO + seed),
 #                  005 (returns + PostEx), 006 (Google login), 007 (admin roles)
 
-# Automated smoke tests (25 assertions; safe to re-run)
+# Automated smoke tests (28 assertions; safe to re-run)
 php tests\smoke.php
 
 # Backup / restore (Phase 8)
@@ -149,6 +149,36 @@ After a successful install or reconfiguration, **delete `public/install.php`** a
 
 The storefront is styled with a champagne-gold accent (`gold`, `gold-deep`, `gold-soft`,
 `champagne` tokens in `resources/tailwind/input.css`). The admin panel keeps the olive accent.
+
+## CSV product import
+
+**Admin → Products → Upload product via CSV** parses the file server-side and opens an
+editable preview before anything is saved.
+
+- One product per row; saving creates the product plus its first variant
+  (size / length / color / price) and initial stock.
+- Required columns: `name`, `sku`, `price`. Optional columns: `sale_price`,
+  `category`, `status`, `size`, `length`, `color`, `stock`, `variant_sku`,
+  `short_description`, `description`, `alt_text`. Header aliases such as `product_name`,
+  `base_price`, `qty` and `colour` are accepted.
+- Comma, semicolon and tab delimiters work; a UTF-8 BOM is ignored. Limits: 100 rows,
+  2 MB.
+- Status defaults to `draft` when blank. Categories are matched by name (or numeric ID);
+  an unknown category imports the product without a category and shows a warning.
+- Duplicate product or variant SKUs are flagged in the preview and skipped. Rows with
+  errors stay in the preview so they can be corrected and saved again.
+- Add one or more images per row (JPG/PNG/WebP, re-encoded, max 5 MB each); the first
+  becomes the primary image. PHP's `max_file_uploads` (default 20) limits total files per
+  save, so split very large image batches.
+- **Sample CSV** downloads a ready-to-edit template.
+
+## Order printing
+
+Open a single order's dispatch sheet from **Orders → Print**, or select several orders
+and use **Print (A4)**. A single order prints on **A4 portrait**; bulk printing uses
+**A4 landscape** with one sheet per order and no trailing blank page. Print styles are
+external (`public/assets/css/print.css`, `print-single.css`) because the Content Security
+Policy blocks inline styles.
 
 ## Web server
 

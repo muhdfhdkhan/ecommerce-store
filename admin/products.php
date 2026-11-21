@@ -3,15 +3,172 @@
 declare(strict_types=1);
 
 require_once BASE_PATH . '/includes/admin_guard.php';
+require_once BASE_PATH . '/includes/product_import.php';
 
 $action = (string)($_GET['action'] ?? 'list');
 $editId = int_in($_GET['id'] ?? null);
 
+// ---------- CSV sample download (no HTML layout) ----------
+if ($action === 'import_sample') {
+    admin_require_permission($ADMIN, 'products.edit');
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="product-import-sample.csv"');
+    echo product_import_sample_csv();
+    exit;
+}
+
+// ---------- CSV preview page (GET after the upload POST redirect) ----------
+$importPreview = null;
+if ($action === 'import') {
+    admin_require_permission($ADMIN, 'products.edit');
+    $importPreview = $_SESSION['product_import'] ?? null;
+    if (!is_array($importPreview) || empty($importPreview['rows']) || !is_array($importPreview['rows'])) {
+        unset($_SESSION['product_import']);
+        $_SESSION['flash_error'] = 'No CSV preview is open. Upload a CSV file first.';
+        safe_redirect('/admin/products');
+    }
+}
+
 // ---------- POST actions (CSRF + permission checked) ----------
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    // A body larger than post_max_size arrives empty, including the CSRF token.
+    if ($_POST === [] && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        $_SESSION['flash_error'] = 'That upload was too large for the server. Save fewer rows or images at a time.';
+        safe_redirect('/admin/products');
+    }
+
     csrf_verify();
 
     $do = (string)($_POST['do'] ?? '');
+
+    // ---------- CSV import: parse and open the preview ----------
+    if ($do === 'import_preview') {
+        admin_require_permission($ADMIN, 'products.edit');
+        try {
+            $tmp = product_import_validate_upload($_FILES['csv'] ?? null);
+            $parsed = product_import_read_csv($tmp);
+            $ctx = product_import_context();
+            $seenProduct = $ctx['product_skus'];
+            $seenVariant = $ctx['variant_skus'];
+            $rows = [];
+            foreach ($parsed['rows'] as $raw) {
+                $rows[] = product_import_normalize_row(
+                    $raw['data'], $ctx, $seenProduct, $seenVariant, (int)$raw['line']
+                );
+            }
+            $_SESSION['product_import'] = [
+                'token' => bin2hex(random_bytes(16)),
+                'file' => mb_substr(trim((string)($_FILES['csv']['name'] ?? 'products.csv')), 0, 120),
+                'created_at' => time(),
+                'rows' => $rows,
+            ];
+            $_SESSION['flash_success'] = count($rows) . ' row(s) read from the CSV. Review the preview and save.';
+            safe_redirect('/admin/products?action=import');
+        } catch (RuntimeException $e) {
+            unset($_SESSION['product_import']);
+            $_SESSION['flash_error'] = $e->getMessage();
+            safe_redirect('/admin/products');
+        }
+    }
+
+    // ---------- CSV import: save reviewed rows + images ----------
+    if ($do === 'import_save') {
+        admin_require_permission($ADMIN, 'products.edit');
+        $preview = $_SESSION['product_import'] ?? null;
+        $token = (string)($_POST['import_token'] ?? '');
+        if (!is_array($preview) || empty($preview['rows']) || !is_string($preview['token'] ?? null)
+            || !hash_equals($preview['token'], $token)) {
+            unset($_SESSION['product_import']);
+            $_SESSION['flash_error'] = 'The import preview expired. Upload the CSV again.';
+            safe_redirect('/admin/products');
+        }
+
+        $ctx = product_import_context();
+        $seenProduct = $ctx['product_skus'];
+        $seenVariant = $ctx['variant_skus'];
+        $rows = [];
+        foreach ($preview['rows'] as $index => $stored) {
+            $rows[$index] = product_import_normalize_row(
+                product_import_row_from_post((int)$index, $stored, $_POST),
+                $ctx,
+                $seenProduct,
+                $seenVariant,
+                (int)($stored['line'] ?? ($index + 2))
+            );
+        }
+
+        $result = product_import_save_rows($rows, $ctx, (int)$ADMIN['id']);
+
+        // Keep unsaved rows so the admin can fix them and retry.
+        $saved = array_flip($result['saved']);
+        $errorsByLine = [];
+        foreach ($result['errors'] as $rowError) {
+            $errorsByLine[(int)$rowError['line']] = array_merge(
+                $errorsByLine[(int)$rowError['line']] ?? [],
+                $rowError['errors']
+            );
+        }
+        $remaining = [];
+        foreach ($rows as $index => $row) {
+            if (isset($saved[$index])) {
+                continue;
+            }
+            if (isset($errorsByLine[(int)$row['line']])) {
+                $row['errors'] = array_values(array_unique(array_merge(
+                    $row['errors'],
+                    $errorsByLine[(int)$row['line']]
+                )));
+            }
+            $remaining[] = $row;
+        }
+
+        if ($remaining !== []) {
+            $_SESSION['product_import'] = [
+                // New token: a stale preview tab must not overwrite the remaining rows.
+                'token' => bin2hex(random_bytes(16)),
+                'file' => (string)($preview['file'] ?? 'products.csv'),
+                'created_at' => time(),
+                'rows' => $remaining,
+            ];
+        } else {
+            unset($_SESSION['product_import']);
+        }
+
+        audit('products_imported', 'product', null, null, [
+            'file' => (string)($preview['file'] ?? 'products.csv'),
+            'created' => $result['created'],
+            'skipped' => $result['skipped'],
+            'images' => $result['images'],
+        ]);
+
+        $message = $result['created'] . ' product(s) imported';
+        if ($result['images'] > 0) {
+            $message .= ', ' . $result['images'] . ' image(s) saved';
+        }
+        $message .= '.';
+        $warningText = $result['warnings'] !== []
+            ? ' ' . implode(' ', array_slice($result['warnings'], 0, 3))
+            : '';
+        if ($result['skipped'] > 0) {
+            $_SESSION['flash_error'] = $message . ' ' . $result['skipped']
+                . ' row(s) still need attention — fix the highlighted fields and save again.' . $warningText;
+        } else {
+            $_SESSION['flash_success'] = $message;
+            if ($warningText !== '') {
+                $_SESSION['flash_error'] = trim($warningText);
+            }
+        }
+        safe_redirect($remaining !== [] ? '/admin/products?action=import' : '/admin/products');
+    }
+
+    // ---------- CSV import: discard the preview ----------
+    if ($do === 'import_cancel') {
+        admin_require_permission($ADMIN, 'products.edit');
+        unset($_SESSION['product_import']);
+        $_SESSION['flash_success'] = 'CSV import cancelled.';
+        safe_redirect('/admin/products');
+    }
+
     if ($do === 'save') {
         admin_require_permission($ADMIN, 'products.edit');
 
@@ -243,8 +400,212 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
-admin_layout('Products', function () use ($ADMIN, $action, $editId) {
+admin_layout('Products', function () use ($ADMIN, $action, $editId, $importPreview) {
     $canEdit = admin_user_can($ADMIN, 'products.edit');
+
+    // ---- CSV import preview (opened after a successful upload) ----
+    if ($action === 'import' && is_array($importPreview)) {
+        $importRows = $importPreview['rows'];
+        $validCount = 0;
+        foreach ($importRows as $importRow) {
+            if ($importRow['errors'] === []) {
+                $validCount++;
+            }
+        }
+        $cats = db()->query(
+            "SELECT id, name FROM categories WHERE status = 'active' AND deleted_at IS NULL ORDER BY name"
+        )->fetchAll();
+        $fileLimit = (int)ini_get('max_file_uploads');
+        if ($fileLimit <= 0) {
+            $fileLimit = 20;
+        }
+        ?>
+        <div class="fixed inset-0 z-50 overflow-y-auto bg-ink/50 p-3 sm:p-6">
+            <div role="dialog" aria-modal="true" aria-labelledby="import-title"
+                 class="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl">
+                <div class="px-4 pt-4 sm:px-6"><?php admin_flash(); ?></div>
+                <div class="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-t-2xl border-b border-line bg-surface px-4 py-4 sm:px-6">
+                    <div class="min-w-0 flex-1">
+                        <h1 id="import-title" class="text-lg font-bold tracking-tight">Import products from CSV</h1>
+                        <p class="text-xs text-muted-ink">
+                            <?= e((string)($importPreview['file'] ?? 'products.csv')) ?> ·
+                            <?= count($importRows) ?> row(s) · <?= $validCount ?> ready to save
+                        </p>
+                    </div>
+                    <form method="post" action="/admin/products?action=import">
+                        <input type="hidden" name="do" value="import_cancel">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="inline-flex h-10 items-center rounded-xl border border-line px-4 text-sm font-semibold hover:bg-canvas">Cancel</button>
+                    </form>
+                </div>
+
+                <form method="post" action="/admin/products?action=import" enctype="multipart/form-data">
+                    <input type="hidden" name="do" value="import_save">
+                    <input type="hidden" name="import_token" value="<?= e((string)($importPreview['token'] ?? '')) ?>">
+                    <?= csrf_field() ?>
+
+                    <div class="space-y-4 px-4 py-4 sm:px-6">
+                        <p class="rounded-xl border border-line bg-canvas/60 px-4 py-3 text-xs text-muted-ink">
+                            Each CSV row becomes one product with its first variant. Rows with red errors are skipped
+                            automatically. Add up to <?= (int)PRODUCT_IMPORT_MAX_IMAGES ?> images per row (JPG/PNG/WebP,
+                            under 5 MB each); the first image becomes the primary. The server accepts up to
+                            <?= $fileLimit ?> files per save, so split very large image batches.
+                        </p>
+
+                        <?php foreach ($importRows as $i => $row): ?>
+                        <?php $hasErrors = $row['errors'] !== []; ?>
+                        <section data-import-row class="rounded-2xl border p-4 <?= $hasErrors ? 'border-danger/40 bg-danger/5' : 'border-line bg-canvas/30' ?>">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-sm font-bold">Row <?= (int)$i + 1 ?></span>
+                                <span class="text-xs text-muted-ink">CSV row <?= (int)($row['line'] ?? 0) ?></span>
+                                <?php if ($hasErrors): ?>
+                                    <span class="ml-auto rounded-full bg-danger/10 px-3 py-1 text-[11px] font-semibold text-danger">Will be skipped</span>
+                                <?php else: ?>
+                                    <span class="ml-auto rounded-full bg-success/10 px-3 py-1 text-[11px] font-semibold text-success">Ready</span>
+                                <?php endif; ?>
+                            </div>
+
+                            <?php if ($hasErrors): ?>
+                            <ul class="mt-2 space-y-1 text-xs text-danger">
+                                <?php foreach ($row['errors'] as $rowError): ?>
+                                    <li><?= e((string)$rowError) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <?php endif; ?>
+                            <?php if ($row['warnings'] !== []): ?>
+                            <ul class="mt-2 space-y-1 text-xs text-warning">
+                                <?php foreach ($row['warnings'] as $rowWarning): ?>
+                                    <li><?= e((string)$rowWarning) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <?php endif; ?>
+
+                            <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-name-<?= (int)$i ?>">Product name</label>
+                                    <input id="ir-name-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][name]" maxlength="180"
+                                           value="<?= e((string)($row['name'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-sku-<?= (int)$i ?>">Product SKU</label>
+                                    <input id="ir-sku-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][sku]" maxlength="64"
+                                           value="<?= e((string)($row['sku'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 font-mono text-sm uppercase">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-vsku-<?= (int)$i ?>">Variant SKU</label>
+                                    <input id="ir-vsku-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][variant_sku]" maxlength="64"
+                                           value="<?= e((string)($row['variant_sku'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 font-mono text-sm uppercase">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-price-<?= (int)$i ?>">Price (PKR)</label>
+                                    <input id="ir-price-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][price]" inputmode="decimal"
+                                           value="<?= e((string)($row['price'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm tabular-nums">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-sale-<?= (int)$i ?>">Sale price</label>
+                                    <input id="ir-sale-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][sale_price]" inputmode="decimal"
+                                           value="<?= e((string)($row['sale_price'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm tabular-nums">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-stock-<?= (int)$i ?>">Stock</label>
+                                    <input id="ir-stock-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][stock]" type="number" min="0" max="1000000"
+                                           value="<?= (int)($row['stock'] ?? 0) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm tabular-nums">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-status-<?= (int)$i ?>">Status</label>
+                                    <select id="ir-status-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][status]"
+                                            class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm">
+                                        <?php foreach (['draft', 'active', 'archived'] as $statusOption): ?>
+                                            <option value="<?= $statusOption ?>" <?= ($row['status'] ?? 'draft') === $statusOption ? 'selected' : '' ?>><?= ucfirst($statusOption) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-cat-<?= (int)$i ?>">Category</label>
+                                    <select id="ir-cat-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][category_id]"
+                                            class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm">
+                                        <option value="">— none —</option>
+                                        <?php foreach ($cats as $cat): ?>
+                                            <option value="<?= (int)$cat['id'] ?>" <?= (int)($row['category_id'] ?? 0) === (int)$cat['id'] ? 'selected' : '' ?>><?= e((string)$cat['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-size-<?= (int)$i ?>">Size</label>
+                                    <input id="ir-size-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][size]" maxlength="32"
+                                           list="import-size-presets" value="<?= e((string)($row['size'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-length-<?= (int)$i ?>">Length</label>
+                                    <input id="ir-length-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][length]" maxlength="32"
+                                           value="<?= e((string)($row['length'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-color-<?= (int)$i ?>">Color</label>
+                                    <input id="ir-color-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][color]" maxlength="32"
+                                           value="<?= e((string)($row['color'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-alt-<?= (int)$i ?>">Image alt text</label>
+                                    <input id="ir-alt-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][alt_text]" maxlength="255"
+                                           value="<?= e((string)($row['alt_text'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm">
+                                </div>
+
+                                <div class="sm:col-span-2 lg:col-span-4">
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-short-<?= (int)$i ?>">Short description</label>
+                                    <input id="ir-short-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][short_description]" maxlength="400"
+                                           value="<?= e((string)($row['short_description'] ?? '')) ?>"
+                                           class="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm">
+                                </div>
+                                <div class="sm:col-span-2 lg:col-span-4">
+                                    <label class="block text-xs font-semibold text-muted-ink" for="ir-desc-<?= (int)$i ?>">Full description</label>
+                                    <textarea id="ir-desc-<?= (int)$i ?>" name="rows[<?= (int)$i ?>][description]" rows="2" maxlength="20000"
+                                              class="mt-1 w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm"><?= e((string)($row['description'] ?? '')) ?></textarea>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 rounded-xl border border-line bg-surface p-3">
+                                <label class="block text-xs font-semibold text-muted-ink" for="ir-images-<?= (int)$i ?>">
+                                    Images for this product <span class="font-normal">(one or more, JPG/PNG/WebP, max 5 MB each)</span>
+                                </label>
+                                <input id="ir-images-<?= (int)$i ?>" type="file" name="images[<?= (int)$i ?>][]"
+                                       accept="image/jpeg,image/png,image/webp" multiple data-import-images
+                                       class="mt-1 block w-full max-w-md rounded-xl border border-line bg-surface px-3 py-2 text-sm">
+                                <div data-import-preview class="mt-2 flex flex-wrap gap-2" aria-live="polite"></div>
+                            </div>
+                        </section>
+                        <?php endforeach; ?>
+                        <datalist id="import-size-presets">
+                            <?php foreach (['1"', '1.5"', '2"', '3"', '4"', '5"', '6"', '8"', '10"', 'Small', 'Medium', 'Large', 'One size'] as $sizePreset): ?>
+                                <option value="<?= e($sizePreset) ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
+                    </div>
+
+                    <div class="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-b-2xl border-t border-line bg-surface px-4 py-4 sm:px-6">
+                        <p class="text-xs text-muted-ink"><?= $validCount ?> of <?= count($importRows) ?> row(s) ready. Invalid rows stay in the preview so you can fix them.</p>
+                        <button type="submit" class="ml-auto inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-semibold text-white hover:bg-accent/90">
+                            Save <?= $validCount ?> product(s)
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <?php
+        return;
+    }
 
     if ($action === 'new' || ($action === 'edit' && $editId)) {
         $product = null;
@@ -298,9 +659,26 @@ admin_layout('Products', function () use ($ADMIN, $action, $editId) {
     <div class="flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-xl font-bold tracking-tight sm:text-2xl">Products</h1>
         <?php if ($canEdit): ?>
-        <a href="/admin/products?action=new" class="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-semibold text-white hover:bg-accent/90">+ New product</a>
+        <div class="flex flex-wrap items-center gap-2">
+            <form method="post" action="/admin/products" enctype="multipart/form-data" class="flex items-center gap-2">
+                <input type="hidden" name="do" value="import_preview">
+                <?= csrf_field() ?>
+                <label class="inline-flex h-11 cursor-pointer items-center rounded-full border border-line bg-surface px-5 text-sm font-semibold hover:bg-canvas">
+                    Upload product via CSV
+                    <input type="file" name="csv" accept=".csv,text/csv" required class="sr-only" data-import-file>
+                </label>
+                <noscript>
+                    <button type="submit" class="inline-flex h-11 items-center rounded-xl bg-ink px-4 text-sm font-semibold text-white">Upload</button>
+                </noscript>
+            </form>
+            <a href="/admin/products?action=import_sample" class="inline-flex h-11 items-center rounded-full border border-line px-4 text-sm font-semibold hover:bg-canvas">Sample CSV</a>
+            <a href="/admin/products?action=new" class="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-semibold text-white hover:bg-accent/90">+ New product</a>
+        </div>
         <?php endif; ?>
     </div>
+    <?php if ($canEdit): ?>
+    <p class="mt-2 text-xs text-muted-ink">CSV import creates one product + its first variant per row. Choose a file to open the editable preview; add images per row before saving.</p>
+    <?php endif; ?>
 
     <form method="get" action="/admin/products" class="mt-4 flex gap-3">
         <input type="hidden" name="action" value="list">

@@ -1,0 +1,259 @@
+/* ------------------------------------------------------------------
+   Dispatch sheets — bulk printing (A4 landscape).
+   Loaded by admin/orders_print.php for two or more orders.
+   External file because the CSP uses style-src 'self' (SECURITY.md §23).
+   ------------------------------------------------------------------ */
+
+@page {
+    size: A4 landscape;
+    margin: 10mm;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+body {
+    margin: 0;
+    background: #f0f0f0;
+    color: #1a1a1a;
+    font: 12px/1.45 "Segoe UI", Arial, sans-serif;
+}
+
+/* ---------- On-screen toolbar (hidden when printing) ---------- */
+.toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #30351b;
+    color: #fff;
+}
+
+.toolbar button {
+    padding: 8px 18px;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    color: #30351b;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.toolbar .count {
+    font-size: 13px;
+    opacity: 0.85;
+}
+
+.toolbar-back {
+    color: #d7d9c8;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.toolbar-back:hover {
+    text-decoration: underline;
+}
+
+/* ---------- Sheet ---------- */
+.sheet {
+    margin: 14px auto;
+    max-width: 277mm;
+    padding: 10mm 12mm;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    break-after: page;
+    page-break-after: always;
+}
+
+.sheet:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
+}
+
+.sheet-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10mm;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #30351b;
+}
+
+.brand {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+}
+
+.brand small {
+    display: block;
+    margin-top: 2px;
+    color: #555;
+    font-size: 10px;
+    font-weight: 400;
+}
+
+.order-no {
+    text-align: right;
+}
+
+.order-no strong {
+    font-size: 16px;
+}
+
+.order-no .meta {
+    color: #666;
+    font-size: 11px;
+}
+
+/* ---------- Address / parcel columns ---------- */
+.cols {
+    display: flex;
+    gap: 10mm;
+    margin-top: 10px;
+}
+
+.col {
+    flex: 1;
+    min-width: 0;
+}
+
+.col h3 {
+    margin: 0 0 4px;
+    color: #666;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* ---------- Items table ---------- */
+table.items {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+}
+
+table.items thead {
+    display: table-header-group;
+}
+
+table.items th,
+table.items td {
+    padding: 5px 8px;
+    border: 1px solid #ccc;
+    font-size: 11.5px;
+    text-align: left;
+}
+
+table.items th {
+    background: #f2f2f2;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+table.items td.num,
+table.items th.num {
+    text-align: right;
+}
+
+table.items tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+/* ---------- Totals ---------- */
+.totals {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.totals dl {
+    min-width: 220px;
+    margin: 0;
+    font-size: 12px;
+}
+
+.totals div {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 2px 0;
+}
+
+.totals dt,
+.totals dd {
+    margin: 0;
+}
+
+.totals .grand {
+    padding-top: 4px;
+    border-top: 1.5px solid #30351b;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+/* ---------- Payment badge ---------- */
+.cod-badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: #30351b;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.cod-badge--paid {
+    background: #26734a;
+}
+
+.footer-note {
+    margin-top: 10px;
+    padding-top: 6px;
+    border-top: 1px solid #ddd;
+    color: #777;
+    font-size: 10px;
+}
+
+.empty-note {
+    padding: 40px 0;
+    color: #888;
+    text-align: center;
+}
+
+/* ---------- Print ---------- */
+@media print {
+    body {
+        background: #fff;
+    }
+
+    .toolbar {
+        display: none;
+    }
+
+    .sheet {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+}

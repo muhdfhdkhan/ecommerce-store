@@ -33,6 +33,8 @@ function activity_label(string $action): string
         'seo_saved'  => 'SEO settings saved',
         'installer_installed'    => 'Site installed with the web installer',
         'installer_reconfigured' => 'Site reconfigured with the web installer',
+        'product_imported'       => 'Product imported from CSV',
+        'products_imported'      => 'Products imported from CSV',
     ];
     if (isset($special[$action])) {
         return $special[$action];

@@ -35,6 +35,9 @@ if ($ids) {
         $orders[$i]['items'] = $ist->fetchAll();
     }
 }
+
+// One order gets an A4 portrait sheet; bulk printing stays A4 landscape.
+$single = count($orders) === 1;
 ?>
 <!doctype html>
 <html lang="en">
@@ -43,55 +46,27 @@ if ($ids) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Dispatch sheets - Patches&amp;Motifs</title>
-<style>
-    @page { size: A4 landscape; margin: 10mm; }
-    * { box-sizing: border-box; }
-    body { font: 12px/1.45 "Segoe UI", Arial, sans-serif; color: #1a1a1a; margin: 0; background: #f0f0f0; }
-    .toolbar { background: #30351B; color: #fff; padding: 10px 16px; position: sticky; top: 0; display: flex; gap: 12px; align-items: center; }
-    .toolbar button { background: #fff; color: #30351B; border: 0; border-radius: 8px; padding: 8px 18px; font-weight: 700; font-size: 13px; cursor: pointer; }
-    .toolbar .count { font-size: 13px; opacity: .85; }
-    .sheet { background: #fff; margin: 14px auto; max-width: 277mm; padding: 10mm 12mm; box-shadow: 0 2px 8px rgba(0,0,0,.15); page-break-after: always; }
-    .sheet-head { display: flex; justify-content: space-between; border-bottom: 2px solid #30351B; padding-bottom: 8px; }
-    .brand { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
-    .brand small { display: block; font-size: 10px; font-weight: 400; color: #555; }
-    .order-no { text-align: right; }
-    .order-no strong { font-size: 16px; }
-    .cols { display: flex; gap: 10mm; margin-top: 10px; }
-    .col { flex: 1; }
-    .col h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #666; margin: 0 0 4px; }
-    table.items { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    table.items th, table.items td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; font-size: 11.5px; }
-    table.items th { background: #f2f2f2; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; }
-    table.items td.num, table.items th.num { text-align: right; }
-    .totals { display: flex; justify-content: flex-end; margin-top: 8px; }
-    .totals dl { min-width: 220px; font-size: 12px; }
-    .totals div { display: flex; justify-content: space-between; padding: 2px 0; }
-    .totals .grand { border-top: 1.5px solid #30351B; font-weight: 800; font-size: 14px; padding-top: 4px; }
-    .cod-badge { display: inline-block; background: #30351B; color: #fff; font-weight: 800; padding: 4px 12px; border-radius: 6px; font-size: 13px; margin-top: 6px; }
-    .footer-note { margin-top: 10px; font-size: 10px; color: #777; border-top: 1px solid #ddd; padding-top: 6px; }
-    @media print {
-        body { background: #fff; }
-        .toolbar { display: none; }
-        .sheet { box-shadow: none; margin: 0; max-width: none; }
-    }
-</style>
+<link rel="stylesheet" href="<?= asset_url('/assets/css/print.css') ?>">
+<?php if ($single): ?>
+<link rel="stylesheet" href="<?= asset_url('/assets/css/print-single.css') ?>">
+<?php endif; ?>
 </head>
 <body>
 <div class="toolbar">
-    <button type="button" data-print-trigger>Print sheets</button>
-    <span class="count"><?= count($orders) ?> order(s) &middot; A4 landscape &middot; one sheet per order</span>
-    <a href="/admin/orders" style="color:#d7d9c8;font-size:13px;">&larr; Back to orders</a>
+    <button type="button" data-print-trigger>Print sheet<?= $single ? '' : 's' ?></button>
+    <span class="count"><?= count($orders) ?> order<?= count($orders) === 1 ? '' : 's' ?> &middot; A4 <?= $single ? 'portrait' : 'landscape' ?> &middot; <?= $single ? 'single order' : 'one sheet per order' ?></span>
+    <a href="/admin/orders" class="toolbar-back">&larr; Back to orders</a>
 </div>
 
 <?php foreach ($orders as $o):
     $address = json_decode((string)$o['shipping_address'], true) ?: []; ?>
-<div class="sheet">
+<div class="sheet<?= $single ? ' sheet--single' : '' ?>">
     <div class="sheet-head">
         <div class="brand">Patches&amp;Motifs<small>Embroidered patches &amp; motifs &middot; patchesandmotifs.test</small></div>
         <div class="order-no">
             <strong><?= htmlspecialchars((string)$o['order_number']) ?></strong>
-            <div style="font-size:11px;color:#666;">Placed: <?= htmlspecialchars(substr((string)$o['placed_at'], 0, 16)) ?> UTC</div>
-            <div style="font-size:11px;color:#666;">Status: <?= htmlspecialchars(str_replace('_', ' ', (string)$o['status'])) ?> &middot; <?= htmlspecialchars(strtoupper((string)$o['payment_method'])) ?></div>
+            <div class="meta">Placed: <?= htmlspecialchars(substr((string)$o['placed_at'], 0, 16)) ?> UTC</div>
+            <div class="meta">Status: <?= htmlspecialchars(str_replace('_', ' ', (string)$o['status'])) ?> &middot; <?= htmlspecialchars(strtoupper((string)$o['payment_method'])) ?></div>
         </div>
     </div>
 
@@ -139,7 +114,7 @@ if ($ids) {
     <?php if ($o['payment_method'] === 'cod'): ?>
     <span class="cod-badge">COD &mdash; Collect Rs <?= number_format((float)$o['grand_total'], 0) ?></span>
     <?php else: ?>
-    <span class="cod-badge" style="background:#26734A;"><?= strtoupper((string)$o['payment_status']) ?> &mdash; Prepaid</span>
+    <span class="cod-badge cod-badge--paid"><?= strtoupper((string)$o['payment_status']) ?> &mdash; Prepaid</span>
     <?php endif; ?>
 
     <p class="footer-note">Thank you for choosing Patches&amp;Motifs. Check contents before sealing; report mismatches within 48 hours.</p>
@@ -147,7 +122,7 @@ if ($ids) {
 <?php endforeach; ?>
 
 <?php if (!$orders): ?>
-<div class="sheet"><p style="text-align:center;padding:40px 0;color:#888;">No orders selected.</p></div>
+<div class="sheet sheet--single"><p class="empty-note">No orders selected.</p></div>
 <?php endif; ?>
 
 <script src="/assets/js/print.js"></script>
