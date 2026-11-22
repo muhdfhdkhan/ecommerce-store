@@ -28,7 +28,7 @@ if (!$slides) {
 $deals = products_search('', ['on_sale' => true, 'sort' => 'newest'], 4, 1)['items'];
 $new   = products_search('', ['sort' => 'newest'], 8, 1)['items'];
 $cats  = db()->query(
-    "SELECT id, name, slug FROM categories WHERE status = 'active' AND deleted_at IS NULL ORDER BY display_order, name LIMIT 6"
+    "SELECT id, name, slug, image_path FROM categories WHERE status = 'active' AND deleted_at IS NULL ORDER BY display_order, name LIMIT 6"
 )->fetchAll();
 $collections = db()->prepare(
     "SELECT title, slug, description, image_path FROM collections
@@ -90,7 +90,12 @@ store_layout('Patches & Motifs', function () use ($slides, $deals, $new, $cats, 
                 <?php foreach ($cats as $c): ?>
                     <a href="/shop?category=<?= (int)$c['id'] ?>" class="group w-36 shrink-0 lg:w-auto">
                         <div class="aspect-[3/4] overflow-hidden rounded-3xl bg-stone-soft ring-1 ring-transparent transition group-hover:ring-gold/60">
-                            <div class="grid h-full place-items-center text-muted-ink"><span class="text-3xl font-bold"><?= e(mb_substr($c['name'], 0, 1)) ?></span></div>
+                            <?php if (!empty($c['image_path'])): ?>
+                                <img src="/uploads/<?= e($c['image_path']) ?>" alt="<?= e($c['name']) ?>" loading="lazy" decoding="async"
+                                     class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]">
+                            <?php else: ?>
+                                <div class="grid h-full place-items-center text-muted-ink"><span class="text-3xl font-bold"><?= e(mb_substr($c['name'], 0, 1)) ?></span></div>
+                            <?php endif; ?>
                         </div>
                         <p class="mt-2 text-sm font-semibold group-hover:text-gold-deep"><?= e($c['name']) ?></p>
                     </a>

@@ -831,6 +831,18 @@ The admin CSV importer treats the file and the editable preview as untrusted inp
 - **CSRF + RBAC:** both the upload and save POSTs require the CSRF token and the
   `products.edit` permission.
 
+### 12.4 Category images and custom sizes
+
+- **Category images** use the same `image_upload_store()` pipeline (content MIME, GD
+  re-encode, random filename, 5 MB / 6000 px cap). A replacement image is deleted only
+  after the database update succeeds; removing an image deletes the stored file. Upload
+  and edit POSTs require the CSRF token and `categories.edit`.
+- **Custom sizes** are accepted only for made-to-order products and only as a number in
+  `store_settings.size_min_inches`–`size_max_inches` (bounded 0.25–100 in, max > min).
+  The typed value never changes the price: the unit price always comes from the selected
+  variant. The size is stored on `cart_items.custom_size` (part of the unique line key)
+  and snapshotted to `order_items.variant_label` at checkout.
+
 ---
 
 ## 13. File System Attacks — Path Traversal, LFI, RFI

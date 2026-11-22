@@ -27,13 +27,42 @@ $cats = db()->prepare(
 $cats->execute();
 $categories = $cats->fetchAll();
 
+// Selected category (banner + heading) — active only.
+$activeCategory = null;
+if ($categoryId !== null) {
+    $cst = db()->prepare(
+        "SELECT id, name, description, image_path FROM categories
+         WHERE id = :id AND status = 'active' AND deleted_at IS NULL LIMIT 1"
+    );
+    $cst->execute([':id' => $categoryId]);
+    $activeCategory = $cst->fetch() ?: null;
+}
+
 $totalPages = max(1, (int)ceil($result['total'] / $result['per_page']));
 
-store_layout($q !== '' ? "Search: $q" : 'Shop', function () use ($result, $categories, $q, $categoryId, $sort, $onSale, $page, $totalPages) { ?>
+store_layout($q !== '' ? "Search: $q" : 'Shop', function () use ($result, $categories, $activeCategory, $q, $categoryId, $sort, $onSale, $page, $totalPages) { ?>
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
     <div class="gold-rule mb-5 w-20"></div>
-    <h1 class="text-2xl font-bold tracking-tight sm:text-3xl"><?= $q !== '' ? 'Search results' : 'Shop all' ?></h1>
+    <h1 class="text-2xl font-bold tracking-tight sm:text-3xl"><?= $q !== '' ? 'Search results' : ($activeCategory ? e((string)$activeCategory['name']) : 'Shop all') ?></h1>
     <p class="mt-1 text-sm text-muted-ink tabular-nums"><?= (int)$result['total'] ?> product<?= $result['total'] == 1 ? '' : 's' ?></p>
+
+    <?php if ($activeCategory): ?>
+    <section class="mt-6 overflow-hidden rounded-3xl border border-line bg-surface sm:grid sm:grid-cols-[240px_1fr]">
+        <?php if (!empty($activeCategory['image_path'])): ?>
+            <div class="aspect-[4/3] bg-stone-soft sm:aspect-auto sm:h-full">
+                <img src="/uploads/<?= e($activeCategory['image_path']) ?>" alt="<?= e((string)$activeCategory['name']) ?>"
+                     class="h-full w-full object-cover">
+            </div>
+        <?php endif; ?>
+        <div class="flex flex-col justify-center p-5 sm:p-7">
+            <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-gold-deep">Category</p>
+            <h2 class="mt-1 text-xl font-bold tracking-tight sm:text-2xl"><?= e((string)$activeCategory['name']) ?></h2>
+            <?php if (!empty($activeCategory['description'])): ?>
+                <p class="mt-2 max-w-2xl text-sm leading-relaxed text-muted-ink"><?= e((string)$activeCategory['description']) ?></p>
+            <?php endif; ?>
+        </div>
+    </section>
+    <?php endif; ?>
 
     <!-- Search + filters -->
     <form method="get" action="/shop" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

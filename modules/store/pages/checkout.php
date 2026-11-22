@@ -190,8 +190,13 @@ store_layout('Checkout', function () use ($cart, $subtotal, $shipping, $total, $
                 <ul class="mt-4 space-y-3 text-sm">
                     <?php foreach ($cart['items'] as $item): ?>
                     <li class="flex justify-between gap-3">
-                        <span class="min-w-0"><span class="line-clamp-1 font-medium"><?= e($item['product_name']) ?></span>
-                            <span class="text-muted-ink tabular-nums">&times; <?= (int)$item['quantity'] ?></span></span>
+                        <span class="min-w-0">
+                            <span class="block line-clamp-1 font-medium"><?= e($item['product_name']) ?></span>
+                            <?php if (trim((string)($item['variant_label'] ?? '')) !== ''): ?>
+                                <span class="block truncate text-xs text-muted-ink"><?= e((string)$item['variant_label']) ?></span>
+                            <?php endif; ?>
+                            <span class="text-muted-ink tabular-nums">&times; <?= (int)$item['quantity'] ?></span>
+                        </span>
                         <span class="shrink-0 tabular-nums"><?= money_fmt($item['line_total_cents']) ?></span>
                     </li>
                     <?php endforeach; ?>

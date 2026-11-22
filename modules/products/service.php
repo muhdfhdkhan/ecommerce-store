@@ -109,7 +109,7 @@ function product_find_by_slug(string $slug): ?array
 function variant_effective_price(int $variantId): ?array
 {
     $st = db()->prepare(
-        "SELECT v.id, v.product_id, v.sku, v.price, v.sale_price, v.is_active,
+        "SELECT v.id, v.product_id, v.sku, v.size_label, v.price, v.sale_price, v.is_active,
                 p.status AS product_status, p.deleted_at, p.name AS product_name,
                 p.made_to_order
          FROM product_variants v

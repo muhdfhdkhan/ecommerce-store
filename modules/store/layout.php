@@ -39,6 +39,26 @@ function store_layout(string $title, callable $content, array $opts = []): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($opts['meta_title'] ?? $title) ?> — <?= e($storeName) ?></title>
 <meta name="description" content="<?= e($opts['meta_description'] ?? 'Embroidery patches, motifs and textile embellishments by ' . $storeName . '.') ?>">
+<?php
+$ogTitle = (string)($opts['meta_title'] ?? $title);
+$ogDescription = (string)($opts['meta_description'] ?? 'Embroidery patches, motifs and textile embellishments by ' . $storeName . '.');
+$ogUrl = (string)($opts['canonical'] ?? (rtrim((string)config('url'), '/') . (strtok((string)($_SERVER['REQUEST_URI'] ?? '/'), '?') ?: '/')));
+$ogImage = trim((string)($opts['meta_image'] ?? ''));
+$ogType = (string)($opts['og_type'] ?? 'website');
+?>
+<meta property="og:site_name" content="<?= e($storeName) ?>">
+<meta property="og:type" content="<?= e($ogType) ?>">
+<meta property="og:title" content="<?= e($ogTitle) ?>">
+<meta property="og:description" content="<?= e($ogDescription) ?>">
+<meta property="og:url" content="<?= e($ogUrl) ?>">
+<?php if ($ogImage !== ''): ?>
+<meta property="og:image" content="<?= e($ogImage) ?>">
+<meta name="twitter:card" content="summary_large_image">
+<?php else: ?>
+<meta name="twitter:card" content="summary">
+<?php endif; ?>
+<meta name="twitter:title" content="<?= e($ogTitle) ?>">
+<meta name="twitter:description" content="<?= e($ogDescription) ?>">
 <?php if ($logo !== ''): ?>
 <link rel="icon" type="image/jpeg" href="/uploads/<?= e($logo) ?>">
 <?php endif; ?>

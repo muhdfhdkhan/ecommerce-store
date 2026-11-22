@@ -38,7 +38,8 @@ if ($method === 'POST') {
             if ($variantId === null || $qty === null) {
                 json_out(['ok' => false, 'error' => 'Invalid item.'], 422);
             }
-            [$ok, $msg] = cart_add_item($variantId, $qty);
+            $customSize = is_scalar($body['custom_size'] ?? null) ? (string)$body['custom_size'] : '';
+            [$ok, $msg] = cart_add_item($variantId, $qty, $customSize);
             if (!$ok) {
                 json_out(['ok' => false, 'error' => $msg], 409);
             }

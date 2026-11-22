@@ -133,3 +133,42 @@ function config(string $key, mixed $default = null): mixed
     }
     return $node;
 }
+
+/** Read one storefront setting (trimmed, cached per request) with a fallback. */
+function store_setting(string $key, string $default = ''): string
+{
+    static $cache = [];
+    if (!array_key_exists($key, $cache)) {
+        $st = db()->prepare('SELECT setting_value FROM store_settings WHERE setting_key = :k LIMIT 1');
+        $st->execute([':k' => $key]);
+        $value = $st->fetchColumn();
+        $cache[$key] = $value === false || trim((string)$value) === ''
+            ? $default
+            : trim((string)$value);
+    }
+    return $cache[$key];
+}
+
+/**
+ * Admin-configured custom size range in inches (Settings - Patch & motif sizing).
+ * Returns [min, max] as floats, always a sane increasing range.
+ */
+function product_size_bounds(): array
+{
+    $min = (float)store_setting('size_min_inches', '1');
+    $max = (float)store_setting('size_max_inches', '12');
+    if ($min <= 0) {
+        $min = 1.0;
+    }
+    if ($max <= $min) {
+        $max = $min + 1.0;
+    }
+    return [$min, $max];
+}
+
+/** Display an inch value without trailing zeros: 3.50 -> "3.5". */
+function product_size_display(float $size): string
+{
+    $out = rtrim(rtrim(number_format($size, 2, '.', ''), '0'), '.');
+    return $out === '' ? '0' : $out;
+}

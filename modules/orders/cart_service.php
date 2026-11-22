@@ -27,9 +27,11 @@ function cart_current(bool $create = true): ?array
 
 /**
  * Add a variant with server-validated quantity and stock (FR-CART-005).
+ * Made-to-order lines may carry a custom size in inches, validated against the
+ * admin range; a size equal to the preset keeps the normal variant label.
  * Returns [ok, message].
  */
-function cart_add_item(int $variantId, int $qty): array
+function cart_add_item(int $variantId, int $qty, string $customSize = ''): array
 {
     $qty = max(1, min(99, $qty));
 
@@ -40,6 +42,31 @@ function cart_add_item(int $variantId, int $qty): array
 
     // Made-to-order products have unlimited supply — skip the stock check (FR-PROD-014).
     $isMto = (bool)($info['variant']['made_to_order'] ?? 0);
+
+    $customSize = trim($customSize);
+    if ($customSize !== '') {
+        if (!$isMto) {
+            return [false, 'Custom sizes are only available for made-to-order products.'];
+        }
+        if (!is_numeric($customSize)) {
+            return [false, 'Enter a valid size in inches.'];
+        }
+        [$sizeMin, $sizeMax] = product_size_bounds();
+        $size = (float)$customSize;
+        if ($size < $sizeMin - 0.001 || $size > $sizeMax + 0.001) {
+            return [false, 'Size must be between ' . product_size_display($sizeMin)
+                . '" and ' . product_size_display($sizeMax) . '".'];
+        }
+        // A typed size that matches the preset keeps the preset's normal label.
+        $presetSize = null;
+        if (preg_match('/(\d+(?:\.\d+)?)/', (string)($info['variant']['size_label'] ?? ''), $m)) {
+            $presetSize = (float)$m[1];
+        }
+        $customSize = ($presetSize !== null && abs($presetSize - $size) < 0.001)
+            ? ''
+            : product_size_display($size);
+    }
+
     if (!$isMto) {
         $available = inventory_available($variantId);
         if ($available < $qty) {
@@ -52,13 +79,19 @@ function cart_add_item(int $variantId, int $qty): array
         return [false, 'Could not create cart.'];
     }
 
-    // Upsert the line (unique cart_id+variant_id).
+    // Upsert the line (unique cart_id+variant_id+custom_size).
     $st = db()->prepare(
-        'INSERT INTO cart_items (cart_id, variant_id, quantity)
-         VALUES (:cart, :variant, :qty)
+        'INSERT INTO cart_items (cart_id, variant_id, custom_size, quantity)
+         VALUES (:cart, :variant, :size, :qty)
          ON DUPLICATE KEY UPDATE quantity = LEAST(quantity + :qty2, 99)'
     );
-    $st->execute([':cart' => (int)$cart['id'], ':variant' => $variantId, ':qty' => $qty, ':qty2' => $qty]);
+    $st->execute([
+        ':cart' => (int)$cart['id'],
+        ':variant' => $variantId,
+        ':size' => $customSize,
+        ':qty' => $qty,
+        ':qty2' => $qty,
+    ]);
 
     return [true, 'Added to cart.'];
 }
@@ -72,11 +105,12 @@ function cart_view(): array
     }
 
     $st = db()->prepare(
-        'SELECT ci.id AS cart_item_id, ci.quantity,
+        'SELECT ci.id AS cart_item_id, ci.quantity, ci.custom_size,
                 v.id AS variant_id, v.sku, v.size_label, v.length_label, v.color_label,
                 p.id AS product_id, p.name AS product_name, p.slug, p.made_to_order,
                 v.price, v.sale_price,
-                (inv.quantity_on_hand - inv.quantity_reserved) AS available
+                CASE WHEN p.made_to_order = 1 THEN NULL
+                     ELSE (inv.quantity_on_hand - inv.quantity_reserved) END AS available
          FROM cart_items ci
          JOIN product_variants v ON v.id = ci.variant_id
          JOIN products p ON p.id = v.product_id
@@ -96,6 +130,10 @@ function cart_view(): array
         $line  = $unit * (int)$row['quantity'];
         $subtotal += $line;
         $count += (int)$row['quantity'];
+        $customSize = trim((string)($row['custom_size'] ?? ''));
+        $sizeLabel = $customSize !== ''
+            ? $customSize . '" (custom)'
+            : $row['size_label'];
         $items[] = [
             'cart_item_id'   => (int)$row['cart_item_id'],
             'variant_id'     => (int)$row['variant_id'],
@@ -106,7 +144,8 @@ function cart_view(): array
             'size_label'     => $row['size_label'],
             'length_label'   => $row['length_label'],
             'color_label'    => $row['color_label'],
-            'variant_label'  => variant_label((string)$row['sku'], $row['size_label'], $row['length_label'], $row['color_label']),
+            'custom_size'    => $customSize,
+            'variant_label'  => variant_label((string)$row['sku'], $sizeLabel, $row['length_label'], $row['color_label']),
             'quantity'       => (int)$row['quantity'],
             'available'      => $row['available'] === null ? null : (int)$row['available'],
             'unit_price_cents' => $unit,
@@ -125,7 +164,11 @@ function cart_update_quantity(int $cartItemId, int $qty): array
     $qty = max(1, min(99, $qty));
 
     $st = db()->prepare(
-        'SELECT ci.variant_id FROM cart_items ci WHERE ci.id = :id AND ci.cart_id = :cart'
+        'SELECT ci.variant_id, p.made_to_order
+         FROM cart_items ci
+         JOIN product_variants v ON v.id = ci.variant_id
+         JOIN products p ON p.id = v.product_id
+         WHERE ci.id = :id AND ci.cart_id = :cart'
     );
     $st->execute([':id' => $cartItemId, ':cart' => (int)$cart['id']]);
     $row = $st->fetch();
@@ -133,9 +176,12 @@ function cart_update_quantity(int $cartItemId, int $qty): array
         return [false, 'Item not found.'];
     }
 
-    $available = inventory_available((int)$row['variant_id']);
-    if ($available < $qty) {
-        return [false, "Only $available available."];
+    // Made-to-order lines have no finite stock to check.
+    if (!(bool)$row['made_to_order']) {
+        $available = inventory_available((int)$row['variant_id']);
+        if ($available < $qty) {
+            return [false, "Only $available available."];
+        }
     }
 
     $upd = db()->prepare('UPDATE cart_items SET quantity = :qty WHERE id = :id AND cart_id = :cart');

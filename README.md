@@ -24,7 +24,7 @@ business management, website management, production readiness):
   (meta title/description per product/category/page, consumed by the storefront),
   transactional email via `includes/mailer.php` logged to `email_log`
 - Phase 8: `docs/SECURITY-AUDIT.md` (live checks + findings), automated smoke tests
-  (`php tests\smoke.php` — 28 assertions), perf indexes + load-tested
+  (`php tests\smoke.php` — 32 assertions), perf indexes + load-tested
   (523–677 req/s local), backup/restore scripts (`scripts/backup.ps1`,
   `scripts/restore.ps1`, round-trip verified)
 - Admin & CX refresh: self-service admin profile (`/admin/profile`), admin user
@@ -56,9 +56,10 @@ php database/seed.php
 
 # New migration placeholder files go in database/migrations/
 # Applied so far: schema.sql, 002 (seed), 003 (phases 6-8), 004 (SEO + seed),
-#                  005 (returns + PostEx), 006 (Google login), 007 (admin roles)
+#                  005 (returns + PostEx), 006 (Google login), 007 (admin roles),
+#                  008 (custom made-to-order sizes)
 
-# Automated smoke tests (28 assertions; safe to re-run)
+# Automated smoke tests (32 assertions; safe to re-run)
 php tests\smoke.php
 
 # Backup / restore (Phase 8)
@@ -171,6 +172,20 @@ editable preview before anything is saved.
   becomes the primary image. PHP's `max_file_uploads` (default 20) limits total files per
   save, so split very large image batches.
 - **Sample CSV** downloads a ready-to-edit template.
+
+## Category images, product sharing and custom sizes
+
+- **Category images:** **Admin → Categories → Edit** accepts a JPG/PNG/WebP image
+  (stored through the hardened upload pipeline). It appears on the homepage category
+  tiles and as a banner on `/shop?category=…`. Replace or remove it from the same form.
+- **Share buttons:** every product page offers native share / copy link plus WhatsApp,
+  Facebook and X links. Product pages also emit Open Graph tags so shared links show a
+  title, description and image preview.
+- **Custom sizes:** made-to-order products show a size slider and a typed size. The
+  slider moves in 0.5″ steps; typing accepts decimals. The allowed range is set in
+  **Admin → Settings → Patch & motif sizing** (default 1–12 in, max > min). The chosen
+  size is stored on the cart line and copied to the order line label; the selected
+  preset still determines the colour and price. Every size is re-validated server-side.
 
 ## Order printing
 

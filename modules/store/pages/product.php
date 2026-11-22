@@ -26,7 +26,27 @@ if ($variants) {
 }
 $images = $product['images'];
 
-store_layout((string)$product['name'], function () use ($product, $variants, $mto, $fromPrice, $images) {
+// Custom size control (made-to-order products) + share targets.
+[$sizeMin, $sizeMax] = $mto ? product_size_bounds() : [1.0, 12.0];
+$defaultSize = $sizeMin;
+$presetSizeFound = false;
+foreach ($variants as $v) {
+    if (preg_match('/(\d+(?:\.\d+)?)/', (string)($v['size_label'] ?? ''), $m)) {
+        $defaultSize = min($sizeMax, max($sizeMin, (float)$m[1]));
+        $presetSizeFound = true;
+        break;
+    }
+}
+// Made-to-order variants often have no preset size — start in the middle of the range.
+if ($mto && !$presetSizeFound) {
+    $defaultSize = min($sizeMax, max($sizeMin, round((($sizeMin + $sizeMax) / 2) * 2) / 2));
+}
+$shareUrl = rtrim((string)config('url'), '/') . '/product/' . rawurlencode((string)$product['slug']);
+$shareTitle = (string)$product['name'];
+$shareText = trim((string)($product['short_description'] ?: 'Embroidered patch by Patches&Motifs.'));
+$shareImage = $images ? rtrim((string)config('url'), '/') . '/uploads/' . $images[0]['file_path'] : '';
+
+store_layout((string)$product['name'], function () use ($product, $variants, $mto, $fromPrice, $images, $sizeMin, $sizeMax, $defaultSize, $shareUrl, $shareTitle, $shareText, $shareImage) {
     $nonce = $GLOBALS['CSP_NONCE'];
 ?>
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
@@ -93,6 +113,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
                                     <?= $out ? 'cursor-not-allowed border-line bg-canvas text-muted-ink line-through' : 'border-line bg-surface hover:border-gold' ?>">
                                     <input type="radio" name="variant_id" value="<?= (int)$v['id'] ?>" data-price="<?= e(number_format($effV, 2, '.', '')) ?>"
                                            data-sku="<?= e($v['sku']) ?>" data-out="<?= $out ? '1' : '0' ?>"
+                                           data-size="<?= e((string)($v['size_label'] ?? '')) ?>"
                                            class="sr-only" <?= $i === 0 ? 'checked' : '' ?> <?= $out ? 'disabled' : '' ?>>
                                     <span><?= e($label) ?></span>
                                     <?php if (!$mto && !$out && (int)$v['available'] <= 5): ?>
@@ -105,6 +126,30 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
                         <p class="mt-2 text-sm text-danger">No variants available for this product.</p>
                     <?php endif; ?>
                 </div>
+
+                <?php if ($mto && $variants): ?>
+                <div class="rounded-2xl border border-gold/40 bg-gold-soft/40 p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <label for="custom-size" class="text-sm font-semibold">Custom size (inches)</label>
+                        <span class="text-xs font-bold tabular-nums text-gold-deep"><?= e(product_size_display($sizeMin)) ?>&Prime; &ndash; <?= e(product_size_display($sizeMax)) ?>&Prime;</span>
+                    </div>
+                    <div class="mt-3 grid items-center gap-3 sm:grid-cols-[1fr_6.5rem]">
+                        <input id="custom-size-range" type="range"
+                               min="<?= e(product_size_display($sizeMin)) ?>" max="<?= e(product_size_display($sizeMax)) ?>"
+                               step="0.5" value="<?= e(product_size_display($defaultSize)) ?>" data-size-range
+                               class="h-2 w-full cursor-pointer accent-[#30351B]" aria-label="Custom size in inches">
+                        <div class="flex items-center gap-2">
+                            <input id="custom-size" name="custom_size" type="number" inputmode="decimal"
+                                   min="<?= e(product_size_display($sizeMin)) ?>" max="<?= e(product_size_display($sizeMax)) ?>"
+                                   step="0.01" value="<?= e(product_size_display($defaultSize)) ?>" data-size-number
+                                   class="h-12 w-full rounded-xl border border-line bg-surface px-3 text-base tabular-nums outline-none focus:border-accent">
+                            <span class="text-sm font-semibold text-muted-ink">in</span>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-muted-ink">Slide or type any size in this range. The preset you pick sets the colour and price.</p>
+                    <p data-size-error class="mt-1 hidden text-xs font-semibold text-danger" role="alert"></p>
+                </div>
+                <?php endif; ?>
 
                 <div class="flex items-end gap-3">
                     <div>
@@ -135,6 +180,35 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
                     </div>
                 <?php endif; ?>
             </div>
+
+            <!-- Share this product -->
+            <div class="mt-8 border-t border-line pt-6">
+                <p class="text-sm font-semibold">Share this <?= $product['category_name'] ? e(mb_strtolower((string)$product['category_name'])) : 'product' ?></p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" data-share-native
+                            data-share-title="<?= e($shareTitle) ?>" data-share-text="<?= e($shareText) ?>" data-share-url="<?= e($shareUrl) ?>"
+                            class="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-semibold transition hover:border-gold hover:bg-gold-soft/40">
+                        Share
+                    </button>
+                    <button type="button" data-share-copy data-share-url="<?= e($shareUrl) ?>"
+                            class="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-semibold transition hover:border-gold hover:bg-gold-soft/40">
+                        Copy link
+                    </button>
+                    <a href="https://wa.me/?text=<?= e(rawurlencode($shareTitle . ' ' . $shareUrl)) ?>" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-semibold transition hover:border-gold hover:bg-gold-soft/40">
+                        WhatsApp
+                    </a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u=<?= e(rawurlencode($shareUrl)) ?>" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-semibold transition hover:border-gold hover:bg-gold-soft/40">
+                        Facebook
+                    </a>
+                    <a href="https://twitter.com/intent/tweet?url=<?= e(rawurlencode($shareUrl)) ?>&amp;text=<?= e(rawurlencode($shareTitle)) ?>" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-semibold transition hover:border-gold hover:bg-gold-soft/40">
+                        X
+                    </a>
+                </div>
+                <p data-share-status role="status" aria-live="polite" class="mt-2 hidden text-xs font-semibold text-success"></p>
+            </div>
         </div>
     </div>
 </div>
@@ -147,4 +221,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
 <?php }, [
     'meta_title' => $product['meta_title'] ?: null,
     'meta_description' => $product['meta_description'] ?: (string)($product['short_description'] ?: $product['name']),
+    'og_type' => 'product',
+    'canonical' => $shareUrl,
+    'meta_image' => $shareImage,
 ]);

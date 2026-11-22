@@ -12,8 +12,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_verify();
     $variantId = int_in($_POST['variant_id'] ?? null);
     $qty = int_in($_POST['qty'] ?? 1, 1, 99) ?? 1;
+    $customSize = is_scalar($_POST['custom_size'] ?? null) ? (string)$_POST['custom_size'] : '';
     if ($variantId !== null) {
-        cart_add_item($variantId, $qty);
+        cart_add_item($variantId, $qty, $customSize);
     }
     safe_redirect('/cart');
 }

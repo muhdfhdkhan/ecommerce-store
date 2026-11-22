@@ -194,6 +194,23 @@ if (!isset($creds['e'], $creds['p'])) {
     [$s, $b] = http_get(BASE . '/admin/orders/print?ids=1', $adminJar);
     check('single print uses portrait stylesheet', $s === 200
         && str_contains($b, 'print.css') && str_contains($b, 'print-single.css'));
+
+    // ---- 7. Category images, custom size, sharing ----
+    [$s, $b] = http_get(BASE . '/admin/categories', $adminJar);
+    check('category admin offers image upload', $s === 200
+        && str_contains($b, 'name="image"'));
+
+    [$s, $b] = http_get(BASE . '/admin/settings', $adminJar);
+    check('settings expose custom size range', $s === 200
+        && str_contains($b, 'name="size_min_inches"') && str_contains($b, 'name="size_max_inches"'));
+
+    [$s, $b] = http_get(BASE . '/product/ethereal-bloom-motif', $cookieJar);
+    check('made-to-order product has custom size control', $s === 200
+        && str_contains($b, 'data-size-range') && str_contains($b, 'name="custom_size"'));
+
+    [$s, $b] = http_get(BASE . '/product/floral-vine-patch', $cookieJar);
+    check('product page has share controls', $s === 200
+        && str_contains($b, 'data-share-copy') && str_contains($b, 'wa.me'));
 }
 
 echo "\n$pass passed, $fail failed\n";

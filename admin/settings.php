@@ -45,6 +45,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         safe_redirect('/admin/settings');
     }
 
+    // Custom size range for made-to-order patches/motifs.
+    if ($do === 'save_sizing') {
+        $sizeMin = $_POST['size_min_inches'] ?? '';
+        $sizeMax = $_POST['size_max_inches'] ?? '';
+        if (!is_numeric($sizeMin) || !is_numeric($sizeMax)) {
+            $_SESSION['flash_error'] = 'Enter both size limits as numbers.';
+            safe_redirect('/admin/settings');
+        }
+        $sizeMin = (float)$sizeMin;
+        $sizeMax = (float)$sizeMax;
+        if ($sizeMin < 0.25 || $sizeMax > 100 || $sizeMax <= $sizeMin) {
+            $_SESSION['flash_error'] = 'Size limits must be between 0.25 and 100 inches, with the maximum above the minimum.';
+            safe_redirect('/admin/settings');
+        }
+        $up->execute([':k' => 'size_min_inches', ':v' => number_format($sizeMin, 2, '.', '')]);
+        $up->execute([':k' => 'size_max_inches', ':v' => number_format($sizeMax, 2, '.', '')]);
+        audit('settings_updated', 'store_settings', null, null,
+            ['keys' => ['size_min_inches', 'size_max_inches']]);
+        $_SESSION['flash_success'] = 'Custom size range saved.';
+        safe_redirect('/admin/settings');
+    }
+
     // save = one section at a time. Each form posts only its own keys, so map
     // them explicitly — otherwise saving the ticker would blank PostEx, etc.
     $formKeys = [
@@ -134,6 +156,37 @@ admin_layout('Settings', function () use ($ADMIN) {
                     Show the ticker bar
                 </label>
                 <button type="submit" class="inline-flex h-11 items-center rounded-xl bg-ink px-6 text-sm font-semibold text-white">Save ticker</button>
+            </form>
+        </section>
+
+        <!-- Custom size range -->
+        <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+            <h2 class="font-bold">Patch &amp; motif sizing</h2>
+            <p class="mt-1 text-xs text-muted-ink">
+                Made-to-order product pages show a size slider and a typed size. Shoppers can choose any
+                size in this range (inches); the slider moves in 0.5&quot; steps.
+            </p>
+            <?php [$sizeMin, $sizeMax] = product_size_bounds(); ?>
+            <form method="post" class="mt-4 space-y-4">
+                <input type="hidden" name="do" value="save_sizing">
+                <?= csrf_field() ?>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="size_min_inches" class="block text-sm font-semibold">Minimum size (inches)</label>
+                        <input id="size_min_inches" name="size_min_inches" type="number" inputmode="decimal"
+                               min="0.25" max="99.75" step="0.25" value="<?= e(product_size_display($sizeMin)) ?>" <?= $canEdit ? '' : 'disabled' ?>
+                               class="mt-1.5 h-12 w-full rounded-xl border border-line bg-canvas/60 px-4 tabular-nums">
+                    </div>
+                    <div>
+                        <label for="size_max_inches" class="block text-sm font-semibold">Maximum size (inches)</label>
+                        <input id="size_max_inches" name="size_max_inches" type="number" inputmode="decimal"
+                               min="0.5" max="100" step="0.25" value="<?= e(product_size_display($sizeMax)) ?>" <?= $canEdit ? '' : 'disabled' ?>
+                               class="mt-1.5 h-12 w-full rounded-xl border border-line bg-canvas/60 px-4 tabular-nums">
+                    </div>
+                </div>
+                <?php if ($canEdit): ?>
+                <button type="submit" class="inline-flex h-11 items-center rounded-xl bg-ink px-6 text-sm font-semibold text-white">Save size range</button>
+                <?php endif; ?>
             </form>
         </section>
 
