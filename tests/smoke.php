@@ -259,6 +259,14 @@ if (!isset($creds['e'], $creds['p'])) {
     check('settings expose custom size range', $s === 200
         && str_contains($b, 'name="size_min_inches"') && str_contains($b, 'name="size_max_inches"'));
 
+    check('settings expose social + WhatsApp fields', $s === 200
+        && str_contains($b, 'name="social_facebook_url"') && str_contains($b, 'name="social_instagram_url"')
+        && str_contains($b, 'name="whatsapp_number"') && str_contains($b, 'value="save_social"'));
+
+    [$s, $b] = http_get(BASE . '/', $cookieJar);
+    check('footer credits National Tech Forge', $s === 200
+        && str_contains($b, 'Developed by') && str_contains($b, 'https://nationaltechforge.netlify.app/contact'));
+
     [$s, $b] = http_get(BASE . '/product/ethereal-bloom-motif', $cookieJar);
     check('made-to-order product has custom size control', $s === 200
         && str_contains($b, 'data-size-range') && str_contains($b, 'name="custom_size"'));

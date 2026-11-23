@@ -845,6 +845,20 @@ The admin CSV importer treats the file and the editable preview as untrusted inp
   variant. The size is stored on `cart_items.custom_size` (part of the unique line key)
   and snapshotted to `order_items.variant_label` at checkout.
 
+### 12.5 Footer social links
+
+- **Validated before storage:** the Facebook/Instagram URLs must parse as `http(s)` URLs
+  (max 300 chars); the WhatsApp number allows only digits, spaces, `+`, `-` and brackets
+  and must hold 8–15 digits including the country code. Every POST requires the CSRF
+  token and `settings.edit`.
+- **Validated again before rendering:** the footer re-checks each URL's scheme and derives
+  the WhatsApp link from digits only (`https://wa.me/<digits>`), so a tampered settings row
+  can never emit a `javascript:`/`data:` href or break out of the attribute. All values are
+  HTML-escaped; the number is displayed as plain text.
+- **Nothing to inject when blank:** an unset link renders no markup; WhatsApp falls back to
+  `store_phone` and is hidden when neither holds a usable number. The developer credit is
+  hard-coded, not settings-driven, so it cannot be repointed.
+
 ---
 
 ## 13. File System Attacks — Path Traversal, LFI, RFI

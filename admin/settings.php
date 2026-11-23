@@ -67,6 +67,44 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         safe_redirect('/admin/settings');
     }
 
+    // Social media links + WhatsApp number (storefront footer).
+    if ($do === 'save_social') {
+        $facebook = trim(mb_substr((string)($_POST['social_facebook_url'] ?? ''), 0, 300));
+        $instagram = trim(mb_substr((string)($_POST['social_instagram_url'] ?? ''), 0, 300));
+        $whatsapp = trim(mb_substr((string)($_POST['whatsapp_number'] ?? ''), 0, 24));
+
+        foreach (['Facebook' => $facebook, 'Instagram' => $instagram] as $label => $url) {
+            if ($url === '') {
+                continue;
+            }
+            $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+            if (!filter_var($url, FILTER_VALIDATE_URL) || !in_array($scheme, ['http', 'https'], true)) {
+                $_SESSION['flash_error'] = $label . ' link must be a full http(s) URL.';
+                safe_redirect('/admin/settings');
+            }
+        }
+
+        if ($whatsapp !== '') {
+            if (preg_match('/[^0-9+()\-\s]/', $whatsapp) === 1) {
+                $_SESSION['flash_error'] = 'WhatsApp number can only contain digits, spaces, +, - and brackets.';
+                safe_redirect('/admin/settings');
+            }
+            $digits = (string)preg_replace('/\D+/', '', $whatsapp);
+            if (strlen($digits) < 8 || strlen($digits) > 15) {
+                $_SESSION['flash_error'] = 'WhatsApp number must contain 8-15 digits including the country code (e.g. +92 300 1234567).';
+                safe_redirect('/admin/settings');
+            }
+        }
+
+        $up->execute([':k' => 'social_facebook_url', ':v' => $facebook]);
+        $up->execute([':k' => 'social_instagram_url', ':v' => $instagram]);
+        $up->execute([':k' => 'whatsapp_number', ':v' => $whatsapp]);
+        audit('settings_updated', 'store_settings', null, null,
+            ['keys' => ['social_facebook_url', 'social_instagram_url', 'whatsapp_number']]);
+        $_SESSION['flash_success'] = 'Social links saved.';
+        safe_redirect('/admin/settings');
+    }
+
     // save = one section at a time. Each form posts only its own keys, so map
     // them explicitly — otherwise saving the ticker would blank PostEx, etc.
     $formKeys = [
@@ -156,6 +194,38 @@ admin_layout('Settings', function () use ($ADMIN) {
                     Show the ticker bar
                 </label>
                 <button type="submit" class="inline-flex h-11 items-center rounded-xl bg-ink px-6 text-sm font-semibold text-white">Save ticker</button>
+            </form>
+        </section>
+
+        <!-- Social media & WhatsApp -->
+        <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+            <h2 class="font-bold">Social media &amp; WhatsApp</h2>
+            <p class="mt-1 text-xs text-muted-ink">
+                Facebook and Instagram icons plus a green WhatsApp button in the storefront footer.
+                Leave a field blank to hide that icon.
+            </p>
+            <form method="post" class="mt-4 space-y-4">
+                <input type="hidden" name="do" value="save_social">
+                <?= csrf_field() ?>
+                <div>
+                    <label for="social_facebook_url" class="block text-sm font-semibold">Facebook page URL</label>
+                    <input id="social_facebook_url" name="social_facebook_url" maxlength="300" placeholder="https://facebook.com/yourpage" value="<?= e($settings['social_facebook_url'] ?? '') ?>" <?= $canEdit ? '' : 'disabled' ?>
+                           class="mt-1.5 h-12 w-full rounded-xl border border-line bg-canvas/60 px-4 text-sm">
+                </div>
+                <div>
+                    <label for="social_instagram_url" class="block text-sm font-semibold">Instagram profile URL</label>
+                    <input id="social_instagram_url" name="social_instagram_url" maxlength="300" placeholder="https://instagram.com/yourprofile" value="<?= e($settings['social_instagram_url'] ?? '') ?>" <?= $canEdit ? '' : 'disabled' ?>
+                           class="mt-1.5 h-12 w-full rounded-xl border border-line bg-canvas/60 px-4 text-sm">
+                </div>
+                <div>
+                    <label for="whatsapp_number" class="block text-sm font-semibold">WhatsApp number <span class="font-normal text-muted-ink">(with country code)</span></label>
+                    <input id="whatsapp_number" name="whatsapp_number" maxlength="24" inputmode="tel" placeholder="+92 300 1234567" value="<?= e($settings['whatsapp_number'] ?? '') ?>" <?= $canEdit ? '' : 'disabled' ?>
+                           class="mt-1.5 h-12 w-full rounded-xl border border-line bg-canvas/60 px-4 tabular-nums">
+                    <p class="mt-1 text-xs text-muted-ink">Shown in a green-bordered WhatsApp button with the number. If blank, the store contact phone is used when available.</p>
+                </div>
+                <?php if ($canEdit): ?>
+                <button type="submit" class="inline-flex h-11 items-center rounded-xl bg-ink px-6 text-sm font-semibold text-white">Save social links</button>
+                <?php endif; ?>
             </form>
         </section>
 

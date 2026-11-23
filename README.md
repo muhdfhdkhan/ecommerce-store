@@ -24,7 +24,7 @@ business management, website management, production readiness):
   (meta title/description per product/category/page, consumed by the storefront),
   transactional email via `includes/mailer.php` logged to `email_log`
 - Phase 8: `docs/SECURITY-AUDIT.md` (live checks + findings), automated smoke tests
-  (`php tests\smoke.php` — 36 assertions), perf indexes + load-tested
+  (`php tests\smoke.php` - 38 assertions), perf indexes + load-tested
   (523–677 req/s local), backup/restore scripts (`scripts/backup.ps1`,
   `scripts/restore.ps1`, round-trip verified)
 - Admin & CX refresh: self-service admin profile (`/admin/profile`), admin user
@@ -59,7 +59,7 @@ php database/seed.php
 #                  005 (returns + PostEx), 006 (Google login), 007 (admin roles),
 #                  008 (custom made-to-order sizes)
 
-# Automated smoke tests (36 assertions; safe to re-run)
+# Automated smoke tests (38 assertions; safe to re-run)
 php tests\smoke.php
 
 # Backup / restore (Phase 8)
@@ -189,6 +189,13 @@ editable preview before anything is saved.
 - **Cart editing:** each cart line has a quantity box (saved when changed) and a Remove
   button. Both use the cart API with the usual CSRF protection, and the Remove button
   also works as a normal form POST when JavaScript is unavailable.
+- **Footer social links:** **Admin → Settings → Social media & WhatsApp** stores a
+  Facebook page URL, an Instagram profile URL and a WhatsApp number. The storefront
+  footer shows a Facebook icon, an Instagram icon and a WhatsApp button with a green
+  border, the WhatsApp logo and the number (linking to `https://wa.me/<digits>`). Each
+  item is hidden when blank; the WhatsApp button falls back to the store contact phone.
+  The footer always ends with “Developed by National Tech Forge”, linking to
+  `https://nationaltechforge.netlify.app/contact` (fixed credit, not editable).
 
 ## Order printing
 
