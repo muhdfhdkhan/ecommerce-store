@@ -24,7 +24,7 @@ if (strlen($raw) > 1048576) {
 $action = (string)($_GET['action'] ?? '');
 
 if ($method === 'POST') {
-    csrf_verify_header_only();
+    csrf_verify_header_only(true);
 
     $body = json_decode($raw, true, 64, JSON_THROW_ON_ERROR);
     if (!is_array($body)) {

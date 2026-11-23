@@ -24,7 +24,7 @@ business management, website management, production readiness):
   (meta title/description per product/category/page, consumed by the storefront),
   transactional email via `includes/mailer.php` logged to `email_log`
 - Phase 8: `docs/SECURITY-AUDIT.md` (live checks + findings), automated smoke tests
-  (`php tests\smoke.php` — 32 assertions), perf indexes + load-tested
+  (`php tests\smoke.php` — 34 assertions), perf indexes + load-tested
   (523–677 req/s local), backup/restore scripts (`scripts/backup.ps1`,
   `scripts/restore.ps1`, round-trip verified)
 - Admin & CX refresh: self-service admin profile (`/admin/profile`), admin user
@@ -59,7 +59,7 @@ php database/seed.php
 #                  005 (returns + PostEx), 006 (Google login), 007 (admin roles),
 #                  008 (custom made-to-order sizes)
 
-# Automated smoke tests (32 assertions; safe to re-run)
+# Automated smoke tests (34 assertions; safe to re-run)
 php tests\smoke.php
 
 # Backup / restore (Phase 8)

@@ -48,6 +48,36 @@ function syncSize(source) {
   sizeRange.value = String(Math.min(sizeMax, Math.max(sizeMin, value)));
 }
 
+// Inline cart feedback (errors are never squeezed into the button label).
+const cartError = document.querySelector('[data-cart-error]');
+
+function showCartMessage(message) {
+  if (!cartError) return;
+  cartError.textContent = message;
+  cartError.classList.remove('hidden');
+}
+
+function hideCartMessage() {
+  if (!cartError) return;
+  cartError.textContent = '';
+  cartError.classList.add('hidden');
+}
+
+/** Ask the server for the current session CSRF token (recovers a rotated/expired one). */
+async function refreshCsrfToken() {
+  try {
+    const res = await fetch('/api/csrf', {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => ({}));
+    return typeof data.token === 'string' && data.token !== '' ? data.token : null;
+  } catch {
+    return null;
+  }
+}
+
 sizeRange?.addEventListener('input', () => syncSize('range'));
 sizeNumber?.addEventListener('input', () => syncSize('number'));
 
@@ -97,31 +127,47 @@ if (addToCartForm) {
       }
     }
     const csrf = addToCartForm.querySelector('input[name="_csrf"]')?.value;
+    const csrfField = addToCartForm.querySelector('input[name="_csrf"]');
 
     btn.disabled = true;
     const prevLabel = btn.textContent;
     btn.textContent = 'Adding\u2026';
+    hideCartMessage();
+
+    const postAdd = (token) => fetch('/api/cart/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+      credentials: 'same-origin',
+      body: JSON.stringify({ variant_id: Number(chosen.value), qty, custom_size: customSize }),
+    });
 
     try {
-      const res = await fetch('/api/cart/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-        credentials: 'same-origin',
-        body: JSON.stringify({ variant_id: Number(chosen.value), qty, custom_size: customSize }),
-      });
-      const data = await res.json().catch(() => ({}));
+      let res = await postAdd(csrf);
+      let data = await res.json().catch(() => ({}));
+      // Session expired, or the token rotated when another tab signed in:
+      // fetch a fresh token and retry once instead of dead-ending on "Failed".
+      if (!res.ok && (res.status === 419 || res.status === 403)) {
+        const token = await refreshCsrfToken();
+        if (token) {
+          if (csrfField) csrfField.value = token;
+          res = await postAdd(token);
+          data = await res.json().catch(() => ({}));
+        }
+      }
       if (res.ok && data.ok) {
         const counter = document.querySelector('[data-cart-count]');
         if (counter && typeof data.count === 'number') counter.textContent = String(data.count);
         btn.textContent = 'Added \u2713';
         setTimeout(() => { btn.textContent = prevLabel; btn.disabled = false; }, 1200);
       } else {
-        btn.textContent = data.error || 'Failed';
-        setTimeout(() => { btn.textContent = prevLabel; btn.disabled = false; }, 1600);
+        showCartMessage(data.error || 'Could not add to cart. Please try again.');
+        btn.textContent = prevLabel;
+        btn.disabled = false;
       }
     } catch {
-      btn.textContent = 'Network error';
-      setTimeout(() => { btn.textContent = prevLabel; btn.disabled = false; }, 1600);
+      showCartMessage('Network error. Check your connection and try again.');
+      btn.textContent = prevLabel;
+      btn.disabled = false;
     }
   });
 }

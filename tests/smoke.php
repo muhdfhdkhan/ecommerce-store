@@ -108,6 +108,28 @@ $s = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
 curl_close($ch);
 check('cart API add returns ok', $s === 200 && ($cartResp['ok'] ?? false) === true);
 
+// CSRF recovery: the page can fetch a fresh token, and a stale token fails as JSON (not plain text).
+[$s, $b] = http_get(BASE . '/api/csrf', $cookieJar);
+$csrfResp = json_decode($b, true);
+check('csrf endpoint returns a token', $s === 200 && ($csrfResp['ok'] ?? false) === true
+    && is_string($csrfResp['token'] ?? null) && strlen($csrfResp['token']) === 64);
+
+$ch = curl_init(BASE . '/api/cart/add');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => '{"variant_id":1,"qty":1}',
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-CSRF-Token: stale-token', 'Accept: application/json'],
+    CURLOPT_COOKIEFILE => $cookieJar,
+    CURLOPT_COOKIEJAR => $cookieJar,
+    CURLOPT_TIMEOUT => 15,
+]);
+$staleResp = json_decode((string)curl_exec($ch), true);
+$s = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+curl_close($ch);
+check('stale CSRF token returns JSON 403', $s === 403 && ($staleResp['ok'] ?? true) === false
+    && str_contains((string)($staleResp['error'] ?? ''), 'session expired'));
+
 // ---- 3. Checkout: coupon apply + order placement ----
 [$s, $b] = http_get(BASE . '/checkout', $cookieJar);
 $csrf = csrf_from($b);

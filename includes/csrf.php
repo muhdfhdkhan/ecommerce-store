@@ -22,10 +22,16 @@ function csrf_rotate(): void
 }
 
 /** Verify CSRF from the X-CSRF-Token header + Origin (used by fetch() JSON endpoints). */
-function csrf_verify_header_only(): void
+function csrf_verify_header_only(bool $jsonResponse = false): void
 {
     $sent = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!is_string($sent) || $sent === '' || !hash_equals($_SESSION['csrf'] ?? '', $sent)) {
+        if ($jsonResponse) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Your session expired. Please try again.']);
+            exit;
+        }
         http_response_code(403);
         exit('Invalid request.');
     }
@@ -33,6 +39,12 @@ function csrf_verify_header_only(): void
     if ($origin !== '') {
         $host = parse_url($origin, PHP_URL_HOST);
         if (!hash_equals($_SERVER['HTTP_HOST'] ?? '', (string)($host ?? ''))) {
+            if ($jsonResponse) {
+                http_response_code(403);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'error' => 'Invalid request origin.']);
+                exit;
+            }
             http_response_code(403);
             exit('Bad origin.');
         }

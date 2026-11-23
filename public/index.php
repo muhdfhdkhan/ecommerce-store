@@ -29,6 +29,7 @@ $routes = [
     '/collections'   => ['modules/store/pages/collections.php', 'public'],
     '/track'         => ['modules/store/pages/track.php',       'private'],
     '/api/cart'      => ['modules/store/api/cart.php',          'private'],
+    '/api/csrf'      => ['modules/store/api/csrf.php',          'private'],
 
     // Admin (each page enforces its own auth via includes/admin_guard.php)
     '/admin'               => ['admin/login.php',      'private'],

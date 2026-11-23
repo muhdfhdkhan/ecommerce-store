@@ -167,6 +167,7 @@ store_layout((string)$product['name'], function () use ($product, $variants, $mt
                         <?= $mto ? 'Order (made to order)' : 'Add to cart' ?>
                     </button>
                 </div>
+                <p data-cart-error class="hidden rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert"></p>
                 <?php if ($mto && $product['lead_time_days']): ?>
                     <p class="text-sm text-muted-ink">Made to order &mdash; ready in about <?= (int)$product['lead_time_days'] ?> days.</p>
                 <?php endif; ?>

@@ -484,6 +484,8 @@ fetch('/api/cart/add', {
 
 Rotate the token after login. Webhooks from payment gateways are exempt from CSRF tokens but **must** verify signatures (§21).
 
+**Stale-token recovery:** a long-open product page (or an admin sign-in in another tab, which rotates the token) can carry an old token. JSON endpoints answer `403` with a JSON error instead of a plain-text abort, and the storefront fetches a fresh token from `GET /api/csrf` and retries the add once, so shoppers never see a dead “Failed” button. The endpoint returns only the session token (same-origin, `no-store`) and never bypasses CSRF checks.
+
 ---
 
 ## 8. Sessions and Cookies
