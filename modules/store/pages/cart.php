@@ -6,10 +6,30 @@ require_once BASE_PATH . '/modules/store/layout.php';
 
 require_once BASE_PATH . '/modules/orders/cart_service.php';
 
-// Non-JS fallback for the add-to-cart form (POST /cart/add). Same server-side
-// validation as the JSON endpoint — no client-trusted values (SECURITY.md §12.3).
+// Non-JS-safe cart mutations (remove / quantity) plus the add-to-cart fallback.
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_verify();
+    $do = (string)($_POST['do'] ?? 'add');
+
+    if ($do === 'remove') {
+        $lineId = int_in($_POST['cart_item_id'] ?? null);
+        if ($lineId !== null) {
+            cart_remove_item($lineId);
+        }
+        safe_redirect('/cart');
+    }
+
+    if ($do === 'update') {
+        $lineId = int_in($_POST['cart_item_id'] ?? null);
+        $qty = int_in($_POST['qty'] ?? null, 1, 99);
+        if ($lineId !== null && $qty !== null) {
+            cart_update_quantity($lineId, $qty);
+        }
+        safe_redirect('/cart');
+    }
+
+    // Non-JS fallback for the add-to-cart form (POST /cart/add). Same server-side
+    // validation as the JSON endpoint — no client-trusted values (SECURITY.md §12.3).
     $variantId = int_in($_POST['variant_id'] ?? null);
     $qty = int_in($_POST['qty'] ?? 1, 1, 99) ?? 1;
     $customSize = is_scalar($_POST['custom_size'] ?? null) ? (string)$_POST['custom_size'] : '';
@@ -24,6 +44,7 @@ $cart = cart_view();
 store_layout('Cart', function () use ($cart) { ?>
 <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
     <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Your cart</h1>
+    <p data-cart-notice class="mt-4 hidden rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert"></p>
 
     <?php if (empty($cart['items'])): ?>
         <div class="mt-8 rounded-3xl border border-line bg-surface p-10 text-center">
@@ -46,8 +67,13 @@ store_layout('Cart', function () use ($cart) { ?>
                             <input type="number" min="1" max="99" value="<?= (int)$item['quantity'] ?>" data-qty-input
                                    class="h-10 w-16 rounded-xl border border-line bg-canvas px-2 tabular-nums">
                         </label>
-                        <button type="button" data-remove-line="<?= (int)$item['cart_item_id'] ?>"
-                                class="text-sm font-semibold text-danger hover:underline">Remove</button>
+                        <form method="post" action="/cart" class="inline" data-remove-form>
+                            <input type="hidden" name="do" value="remove">
+                            <input type="hidden" name="cart_item_id" value="<?= (int)$item['cart_item_id'] ?>">
+                            <?= csrf_field() ?>
+                            <button type="submit" data-remove-line="<?= (int)$item['cart_item_id'] ?>"
+                                    class="text-sm font-semibold text-danger hover:underline">Remove</button>
+                        </form>
                         <?php if ($item['available'] !== null && (int)$item['available'] < (int)$item['quantity']): ?>
                             <span class="text-xs font-semibold text-warning">Only <?= (int)$item['available'] ?> in stock</span>
                         <?php endif; ?>

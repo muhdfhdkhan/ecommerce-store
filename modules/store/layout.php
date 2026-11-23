@@ -39,6 +39,7 @@ function store_layout(string $title, callable $content, array $opts = []): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($opts['meta_title'] ?? $title) ?> — <?= e($storeName) ?></title>
 <meta name="description" content="<?= e($opts['meta_description'] ?? 'Embroidery patches, motifs and textile embellishments by ' . $storeName . '.') ?>">
+<meta name="csrf-token" content="<?= e(csrf_token()) ?>">
 <?php
 $ogTitle = (string)($opts['meta_title'] ?? $title);
 $ogDescription = (string)($opts['meta_description'] ?? 'Embroidery patches, motifs and textile embellishments by ' . $storeName . '.');

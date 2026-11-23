@@ -63,6 +63,19 @@ function hideCartMessage() {
   cartError.classList.add('hidden');
 }
 
+/** Current session CSRF token: the layout meta tag, or a form field on older pages. */
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta?.content || document.querySelector('input[name="_csrf"]')?.value || '';
+}
+
+/** Keep every token carrier on the page in sync after a token refresh. */
+function storeCsrfToken(token) {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta) meta.content = token;
+  document.querySelectorAll('input[name="_csrf"]').forEach((field) => { field.value = token; });
+}
+
 /** Ask the server for the current session CSRF token (recovers a rotated/expired one). */
 async function refreshCsrfToken() {
   try {
@@ -126,8 +139,7 @@ if (addToCartForm) {
         return false;
       }
     }
-    const csrf = addToCartForm.querySelector('input[name="_csrf"]')?.value;
-    const csrfField = addToCartForm.querySelector('input[name="_csrf"]');
+    const csrf = getCsrfToken();
 
     btn.disabled = true;
     const prevLabel = btn.textContent;
@@ -149,7 +161,7 @@ if (addToCartForm) {
       if (!res.ok && (res.status === 419 || res.status === 403)) {
         const token = await refreshCsrfToken();
         if (token) {
-          if (csrfField) csrfField.value = token;
+          storeCsrfToken(token);
           res = await postAdd(token);
           data = await res.json().catch(() => ({}));
         }
@@ -169,6 +181,99 @@ if (addToCartForm) {
       btn.textContent = prevLabel;
       btn.disabled = false;
     }
+  });
+}
+
+// Cart page: remove lines and change quantities through the JSON API, with a
+// no-JS fallback already handled by the server-side forms.
+const cartLines = document.getElementById('cart-lines');
+if (cartLines) {
+  const cartNotice = document.querySelector('[data-cart-notice]');
+
+  const showCartNotice = (message) => {
+    if (!cartNotice) return;
+    cartNotice.textContent = message;
+    cartNotice.classList.remove('hidden');
+  };
+
+  const hideCartNotice = () => {
+    if (!cartNotice) return;
+    cartNotice.textContent = '';
+    cartNotice.classList.add('hidden');
+  };
+
+  const syncCartSummary = (data) => {
+    const counter = document.querySelector('[data-cart-count]');
+    if (counter && typeof data.count === 'number') counter.textContent = String(data.count);
+    const subtotal = document.querySelector('[data-subtotal]');
+    if (subtotal && typeof data.subtotal === 'string') subtotal.textContent = data.subtotal;
+  };
+
+  const cartApiPost = async (action, payload) => {
+    const send = (token) => fetch('/api/cart/' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    });
+    let res = await send(getCsrfToken());
+    let data = await res.json().catch(() => ({}));
+    // Same stale-token recovery as add-to-cart.
+    if (!res.ok && (res.status === 403 || res.status === 419)) {
+      const token = await refreshCsrfToken();
+      if (token) {
+        storeCsrfToken(token);
+        res = await send(token);
+        data = await res.json().catch(() => ({}));
+      }
+    }
+    return { res, data };
+  };
+
+  cartLines.querySelectorAll('[data-remove-form]').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('[data-remove-line]');
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      hideCartNotice();
+
+      const lineId = Number(btn.dataset.removeLine || 0);
+      const { res, data } = await cartApiPost('remove', { cart_item_id: lineId });
+      if (res.ok && data.ok) {
+        btn.closest('li')?.remove();
+        syncCartSummary(data);
+        if (!cartLines.querySelector('li')) {
+          window.location.reload(); // show the server-rendered empty state
+        }
+      } else {
+        btn.disabled = false;
+        showCartNotice(data.error || 'Could not remove this item. Please try again.');
+      }
+    });
+  });
+
+  cartLines.querySelectorAll('[data-qty-input]').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const line = input.closest('li');
+      const lineId = Number(line?.dataset.lineId || 0);
+      const qty = Math.max(1, Math.min(99, Number(input.value) || 1));
+      if (!lineId) return;
+      const previous = input.defaultValue;
+      input.value = String(qty);
+      input.disabled = true;
+      hideCartNotice();
+
+      const { res, data } = await cartApiPost('update', { cart_item_id: lineId, qty });
+      if (res.ok && data.ok) {
+        // Line totals are server-side; refresh so every number stays correct.
+        window.location.reload();
+      } else {
+        input.value = previous;
+        input.disabled = false;
+        showCartNotice(data.error || 'Could not update the quantity. Please try again.');
+      }
+    });
   });
 }
 

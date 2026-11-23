@@ -24,7 +24,7 @@ business management, website management, production readiness):
   (meta title/description per product/category/page, consumed by the storefront),
   transactional email via `includes/mailer.php` logged to `email_log`
 - Phase 8: `docs/SECURITY-AUDIT.md` (live checks + findings), automated smoke tests
-  (`php tests\smoke.php` — 34 assertions), perf indexes + load-tested
+  (`php tests\smoke.php` — 36 assertions), perf indexes + load-tested
   (523–677 req/s local), backup/restore scripts (`scripts/backup.ps1`,
   `scripts/restore.ps1`, round-trip verified)
 - Admin & CX refresh: self-service admin profile (`/admin/profile`), admin user
@@ -59,7 +59,7 @@ php database/seed.php
 #                  005 (returns + PostEx), 006 (Google login), 007 (admin roles),
 #                  008 (custom made-to-order sizes)
 
-# Automated smoke tests (34 assertions; safe to re-run)
+# Automated smoke tests (36 assertions; safe to re-run)
 php tests\smoke.php
 
 # Backup / restore (Phase 8)
@@ -186,6 +186,9 @@ editable preview before anything is saved.
   **Admin → Settings → Patch & motif sizing** (default 1–12 in, max > min). The chosen
   size is stored on the cart line and copied to the order line label; the selected
   preset still determines the colour and price. Every size is re-validated server-side.
+- **Cart editing:** each cart line has a quantity box (saved when changed) and a Remove
+  button. Both use the cart API with the usual CSRF protection, and the Remove button
+  also works as a normal form POST when JavaScript is unavailable.
 
 ## Order printing
 

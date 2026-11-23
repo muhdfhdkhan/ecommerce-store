@@ -62,6 +62,9 @@ function http_post(string $url, array $fields, string $jar, array $headers = [])
 
 function csrf_from(string $html): string
 {
+    if (preg_match('/name="csrf-token" content="([^"]+)"/', $html, $m) === 1) {
+        return $m[1];
+    }
     if (preg_match('/name="_csrf" value="([^"]+)"/', $html, $m) === 1) {
         return $m[1];
     }
@@ -160,6 +163,36 @@ $placed = $b;
     'ship_postal' => '54000', 'payment_method' => 'cod', 'idempotency_key' => $idem,
 ], $cookieJar);
 check('idempotency replay does not create a second order', $b2 === $b || !str_contains($b2, 'EMB-'));
+
+// ---- 3b. Cart line removal (JS API + no-JS form fallback) ----
+[, $b] = http_get(BASE . '/cart', $cookieJar);
+$cartToken = csrf_from($b);
+$ch = curl_init(BASE . '/api/cart/add');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => '{"variant_id":1,"qty":1}',
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-CSRF-Token: ' . $cartToken],
+    CURLOPT_COOKIEFILE => $cookieJar,
+    CURLOPT_COOKIEJAR => $cookieJar,
+    CURLOPT_TIMEOUT => 15,
+]);
+$addResp = json_decode((string)curl_exec($ch), true);
+curl_close($ch);
+
+[$s, $b] = http_get(BASE . '/cart', $cookieJar);
+$lineId = 0;
+if (preg_match('/data-remove-line="(\d+)"/', $b, $m) === 1) {
+    $lineId = (int)$m[1];
+}
+check('cart page offers remove control', ($addResp['ok'] ?? false) === true
+    && $s === 200 && $lineId > 0 && str_contains($b, 'data-remove-form'));
+
+[$s, $b] = http_post(BASE . '/cart', [
+    'do' => 'remove', 'cart_item_id' => $lineId, '_csrf' => csrf_from($b),
+], $cookieJar);
+[$s, $b] = http_get(BASE . '/cart', $cookieJar);
+check('cart line removes via form fallback', $s === 200 && str_contains($b, 'Your cart is empty'));
 
 // ---- 4. Public order tracking (two-factor lookup) ----
 $orderNo = '';
