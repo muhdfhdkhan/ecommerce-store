@@ -24,7 +24,7 @@ business management, website management, production readiness):
   (meta title/description per product/category/page, consumed by the storefront),
   transactional email via `includes/mailer.php` logged to `email_log`
 - Phase 8: `docs/SECURITY-AUDIT.md` (live checks + findings), automated smoke tests
-  (`php tests\smoke.php` - 38 assertions), perf indexes + load-tested
+  (`php tests\smoke.php` - 39 assertions), perf indexes + load-tested
   (523–677 req/s local), backup/restore scripts (`scripts/backup.ps1`,
   `scripts/restore.ps1`, round-trip verified)
 - Admin & CX refresh: self-service admin profile (`/admin/profile`), admin user
@@ -59,7 +59,7 @@ php database/seed.php
 #                  005 (returns + PostEx), 006 (Google login), 007 (admin roles),
 #                  008 (custom made-to-order sizes)
 
-# Automated smoke tests (38 assertions; safe to re-run)
+# Automated smoke tests (39 assertions; safe to re-run)
 php tests\smoke.php
 
 # Backup / restore (Phase 8)
@@ -147,6 +147,9 @@ After a successful install or reconfiguration, **delete `public/install.php`** a
 - **Track order** (`/track`) — customers enter their order number **and** the email or phone
   used at checkout, so no order details leak to someone who only guesses a number. Lookups
   are rate limited (10 failures per 15 minutes per IP) and failures are audited.
+- **Sidebar icons** — every option in the admin sidebar has its own inline SVG icon
+  (`admin_nav_item()` in `includes/admin_guard.php`), so the menu is scannable at a glance;
+  icons are decorative (`aria-hidden`) and tint to the accent colour on hover.
 
 The storefront is styled with a champagne-gold accent (`gold`, `gold-deep`, `gold-soft`,
 `champagne` tokens in `resources/tailwind/input.css`). The admin panel keeps the olive accent.

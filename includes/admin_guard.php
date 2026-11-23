@@ -58,6 +58,17 @@ function admin_flash(): void
     }
 }
 
+/** Sidebar nav row: stroked icon + label. $icon is trusted, hard-coded SVG markup. */
+function admin_nav_item(string $href, string $label, string $icon): void
+{
+    ?>
+    <a href="<?= e($href) ?>" class="group flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">
+        <svg viewBox="0 0 24 24" class="h-[18px] w-[18px] shrink-0 text-muted-ink transition group-hover:text-accent" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><?= $icon ?></svg>
+        <span class="truncate"><?= e($label) ?></span>
+    </a>
+    <?php
+}
+
 /**
  * Admin shell layout (DESIGN.md §11): fixed sidebar desktop, drawer mobile,
  * compact top bar with user menu and sign out.
@@ -112,37 +123,67 @@ function admin_layout(string $title, callable $content): void
     <div data-drawer-backdrop class="fixed inset-0 z-40 hidden bg-ink/40 lg:hidden"></div>
     <aside data-drawer class="admin-sidebar fixed inset-y-0 left-0 z-50 w-72 -translate-x-full overflow-y-auto border-r border-line bg-surface p-4 transition-transform duration-200 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:w-60 lg:shrink-0 lg:translate-x-0 lg:rounded-2xl lg:border">
         <nav aria-label="Admin navigation" class="space-y-1">
-            <a href="/admin/dashboard" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition hover:bg-canvas">Overview</a>
-            <a href="/admin/analytics" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Analytics</a>
+            <?php
+            admin_nav_item('/admin/dashboard', 'Overview',
+                '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>');
+            admin_nav_item('/admin/analytics', 'Analytics',
+                '<path d="M3 21h18"/><path d="M6 21v-8"/><path d="M12 21V6"/><path d="M18 21v-5"/>');
+            ?>
             <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Catalog</p>
-            <a href="/admin/products" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Products</a>
-            <a href="/admin/categories" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Categories</a>
-            <a href="/admin/collections" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Collections</a>
+            <?php
+            admin_nav_item('/admin/products', 'Products',
+                '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>');
+            admin_nav_item('/admin/categories', 'Categories',
+                '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.4l2 2h7.6A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5Z"/>');
+            admin_nav_item('/admin/collections', 'Collections',
+                '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>');
+            ?>
             <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Operations</p>
-            <a href="/admin/orders" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Orders</a>
-            <a href="/admin/inventory" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Inventory</a>
-            <a href="/admin/customers" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Customers</a>
+            <?php
+            admin_nav_item('/admin/orders', 'Orders',
+                '<path d="M6 7h12l-1.2 12.2a1.8 1.8 0 0 1-1.8 1.8H9a1.8 1.8 0 0 1-1.8-1.8L6 7Z"/><path d="M9 7a3 3 0 1 1 6 0"/>');
+            admin_nav_item('/admin/inventory', 'Inventory',
+                '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M4 7.5 12 12l8-4.5"/><path d="M12 12v9"/>');
+            admin_nav_item('/admin/customers', 'Customers',
+                '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>');
+            ?>
             <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Business</p>
-            <a href="/admin/promotions" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Promotions</a>
-            <a href="/admin/suppliers" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Suppliers</a>
-            <a href="/admin/purchasing" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Purchasing</a>
-            <a href="/admin/payments" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Payments</a>
-            <a href="/admin/reports" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Reports</a>
+            <?php
+            admin_nav_item('/admin/promotions', 'Promotions',
+                '<path d="M19 5 5 19"/><circle cx="7.5" cy="7.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/>');
+            admin_nav_item('/admin/suppliers', 'Suppliers',
+                '<rect x="3" y="6" width="10" height="9" rx="1"/><path d="M13 10h4l3 3v2h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>');
+            admin_nav_item('/admin/purchasing', 'Purchasing',
+                '<path d="M4 9h16l-1.5 9.5a2 2 0 0 1-2 1.5H7.5a2 2 0 0 1-2-1.5L4 9Z"/><path d="m8 9 2-5"/><path d="m16 9-2-5"/>');
+            admin_nav_item('/admin/payments', 'Payments',
+                '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/><path d="M6 15h4"/>');
+            admin_nav_item('/admin/reports', 'Reports',
+                '<path d="M12 3a9 9 0 1 0 9 9h-9V3Z"/><path d="M15.5 3.6A9 9 0 0 1 20.4 8.5h-4.9V3.6Z"/>');
+            ?>
             <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Website</p>
-            <a href="/admin/banners" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Banners</a>
-            <a href="/admin/cms" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">CMS pages</a>
-            <a href="/admin/seo" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">SEO</a>
-            <a href="/admin/settings" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Settings</a>
+            <?php
+            admin_nav_item('/admin/banners', 'Banners',
+                '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m4 17.5 5-4.5 4 3 3-2.5 4 4"/>');
+            admin_nav_item('/admin/cms', 'CMS pages',
+                '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/>');
+            admin_nav_item('/admin/seo', 'SEO',
+                '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/>');
+            admin_nav_item('/admin/settings', 'Settings',
+                '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>');
+            ?>
             <?php if ($canUsers || $canLogs): ?>
             <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-ink">Administration</p>
-            <?php if ($canUsers): ?>
-            <a href="/admin/users" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Users</a>
+            <?php if ($canUsers):
+                admin_nav_item('/admin/users', 'Users',
+                    '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6"/><path d="M17.5 14.4A5.5 5.5 0 0 1 21 19.4"/>');
+            endif; ?>
+            <?php if ($canLogs):
+                admin_nav_item('/admin/activity', 'Activity log',
+                    '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>');
+            endif; ?>
             <?php endif; ?>
-            <?php if ($canLogs): ?>
-            <a href="/admin/activity" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">Activity log</a>
-            <?php endif; ?>
-            <?php endif; ?>
-            <a href="/admin/profile" class="flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition hover:bg-canvas">My account</a>
+            <?php admin_nav_item('/admin/profile', 'My account',
+                '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.6 18.7a6.2 6.2 0 0 1 10.8 0"/>'); ?>
         </nav>
     </aside>
 

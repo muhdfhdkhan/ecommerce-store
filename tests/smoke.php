@@ -239,6 +239,17 @@ if (!isset($creds['e'], $creds['p'])) {
     [$s, $b] = http_get(BASE . '/admin/products', $cookieJar);
     check('guest cannot open admin (no Sign out)', !str_contains($b, 'Sign out'));
 
+    // ---- 5b. Admin sidebar icons ----
+    [$s, $b] = http_get(BASE . '/admin/dashboard', $adminJar);
+    $navIcons = 0;
+    $navLabels = 0;
+    if (preg_match('/<nav aria-label="Admin navigation"[\s\S]*?<\/nav>/', $b, $m) === 1) {
+        $navIcons = substr_count($m[0], '<svg viewBox="0 0 24 24"');
+        $navLabels = substr_count($m[0], 'class="truncate"');
+    }
+    check('admin sidebar shows an icon per option', $s === 200
+        && $navIcons >= 18 && $navIcons === $navLabels);
+
     // ---- 6. CSV import UI + print assets ----
     [$s, $b] = http_get(BASE . '/admin/products', $adminJar);
     check('products page offers CSV import', $s === 200 && str_contains($b, 'Upload product via CSV'));
