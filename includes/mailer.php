@@ -40,8 +40,21 @@ function mailer_send(string $toEmail, string $subject, string $body, string $eve
         return;
     }
     $subject = mb_substr($subject, 0, 200);
-    $fromEmail = (string)config('mail.from_email', 'store@patchesandmotifs.test');
-    $fromName  = mailer_brand_name();
+    // Sender: MAIL_FROM_EMAIL, then a no-reply address on the store's own domain
+    // (cPanel mail() rejects/spam-files a foreign From). Never fall back to a
+    // .test address in production.
+    $fromEmail = trim((string)config('mail.from_email', ''));
+    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        $host = (string)parse_url((string)config('url', ''), PHP_URL_HOST);
+        $host = preg_match('/^[A-Za-z0-9.-]+$/', $host) === 1 ? $host : '';
+        $fromEmail = $host !== '' ? 'no-reply@' . $host : 'store@localhost';
+    }
+    $fromName = trim((string)config('mail.from_name', ''));
+    if ($fromName === '') {
+        $fromName = mailer_brand_name();
+    }
+    // Header values must never carry CR/LF (header injection).
+    $fromName = trim((string)preg_replace('/[\r\n\0]+/', ' ', $fromName));
 
     $headers = implode("\r\n", [
         'From: ' . $fromName . ' <' . $fromEmail . '>',

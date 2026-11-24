@@ -74,6 +74,8 @@ php database/make_placeholders.php
 
 ## Deploy with the web installer
 
+Full cPanel walkthrough: [`docs/DEPLOYMENT-CPANEL.md`](docs/DEPLOYMENT-CPANEL.md).
+
 Upload the project, point the web root at `public/`, then open:
 
 ```

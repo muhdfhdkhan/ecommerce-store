@@ -25,4 +25,12 @@ return [
         'admin_idle'    => 1800,   // 30 minutes inactivity (SECURITY.md §8.3)
         'admin_absolut' => 8 * 3600, // 8 hours absolute cap
     ],
+
+    'mail' => [
+        // Outgoing mail sender. On production set MAIL_FROM_EMAIL to a mailbox on
+        // the store's own domain (cPanel → Email Accounts) so SPF/DKIM pass;
+        // blank falls back to no-reply@<APP_URL host> in includes/mailer.php.
+        'from_name'  => env('MAIL_FROM_NAME') ?? '',
+        'from_email' => env('MAIL_FROM_EMAIL') ?? '',
+    ],
 ];
