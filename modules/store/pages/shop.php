@@ -65,7 +65,7 @@ store_layout($q !== '' ? "Search: $q" : 'Shop', function () use ($result, $categ
     <?php endif; ?>
 
     <!-- Search + filters -->
-    <form method="get" action="/shop" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <form method="get" action="/shop" data-auto-filter class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <label class="sr-only" for="q">Search products</label>
         <input id="q" name="q" type="search" value="<?= e($q) ?>" maxlength="80" placeholder="Search patches and motifs&hellip;"
                class="h-12 w-full rounded-full border border-line bg-surface px-5 text-base outline-none focus:border-accent sm:max-w-sm">

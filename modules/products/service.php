@@ -27,8 +27,10 @@ function products_search(string $q, array $filters, int $perPage, int $page): ar
 
     if ($q !== '') {
         $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_substr($q, 0, 80));
-        $where[]  = '(p.name LIKE :like_q OR p.sku LIKE :like_q)';
-        $params[':like_q'] = "%$like%";
+        // Native prepared statements (emulation off) need one placeholder per use.
+        $where[]  = '(p.name LIKE :like_name OR p.sku LIKE :like_sku)';
+        $params[':like_name'] = "%$like%";
+        $params[':like_sku']  = "%$like%";
     }
     if (!empty($filters['category_id'])) {
         $where[]  = 'p.category_id = :cat';

@@ -338,6 +338,21 @@ if (searchToggle && searchBar) {
   });
 }
 
+// Shop filters: choosing a category/sort/on-sale applies immediately.
+// The Apply button stays as the no-JS fallback.
+const autoFilterForm = document.querySelector('[data-auto-filter]');
+if (autoFilterForm) {
+  autoFilterForm.querySelectorAll('select, input[type="checkbox"]').forEach((field) => {
+    field.addEventListener('change', () => {
+      if (typeof autoFilterForm.requestSubmit === 'function') {
+        autoFilterForm.requestSubmit();
+      } else {
+        autoFilterForm.submit();
+      }
+    });
+  });
+}
+
 // Product sharing: native share sheet, clipboard copy, and social links.
 const shareStatus = document.querySelector('[data-share-status]');
 let shareTimer = null;

@@ -65,8 +65,12 @@ admin_layout('Activity log', function () use ($ADMIN) {
         $params = [];
         if ($q !== '') {
             $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
-            $where[] = '(a.action LIKE :q OR a.entity LIKE :q OR a.ip LIKE :q OR u.name LIKE :q OR u.email LIKE :q)';
-            $params[':q'] = $like;
+            $where[] = '(a.action LIKE :q_action OR a.entity LIKE :q_entity OR a.ip LIKE :q_ip OR u.name LIKE :q_user OR u.email LIKE :q_email)';
+            $params[':q_action'] = $like;
+            $params[':q_entity'] = $like;
+            $params[':q_ip']     = $like;
+            $params[':q_user']   = $like;
+            $params[':q_email']  = $like;
         }
         if ($userId !== null) {
             $where[] = 'a.user_id = :uid';
@@ -110,8 +114,9 @@ admin_layout('Activity log', function () use ($ADMIN) {
         $params = [];
         if ($q !== '') {
             $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
-            $where[] = '(la.identifier LIKE :q OR la.ip LIKE :q)';
-            $params[':q'] = $like;
+            $where[] = '(la.identifier LIKE :q_ident OR la.ip LIKE :q_ip)';
+            $params[':q_ident'] = $like;
+            $params[':q_ip']    = $like;
         }
         if ($from !== '') {
             $where[] = 'la.attempted_at >= :from';

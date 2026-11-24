@@ -149,9 +149,16 @@ $ogType = (string)($opts['og_type'] ?? 'website');
     <!-- Mobile drawer -->
     <div data-store-menu-backdrop class="fixed inset-0 z-40 hidden bg-ink/40 lg:hidden"></div>
     <aside data-store-menu class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full bg-surface p-5 transition-transform duration-200 lg:hidden">
-        <div class="mb-6 flex items-center justify-between">
-            <span class="text-base font-bold">Menu</span>
-            <button type="button" data-store-menu-close aria-label="Close menu" class="grid h-11 w-11 place-items-center rounded-full hover:bg-canvas">
+        <div class="mb-6 flex items-center justify-between gap-3">
+            <a href="/" class="flex min-w-0 items-center gap-2.5" aria-label="<?= e($storeName) ?> home">
+                <?php if ($logo !== ''): ?>
+                    <img src="/uploads/<?= e($logo) ?>" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-gold/50">
+                <?php else: ?>
+                    <span aria-hidden="true" class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-[13px] font-bold tracking-tight text-white ring-1 ring-gold/60">P&amp;M</span>
+                <?php endif; ?>
+                <span class="truncate text-[15px] font-bold tracking-tight"><?= e($storeName) ?></span>
+            </a>
+            <button type="button" data-store-menu-close aria-label="Close menu" class="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-canvas">
                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
         </div>

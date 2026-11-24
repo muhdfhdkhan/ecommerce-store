@@ -4,12 +4,13 @@
 
 ## 1. Automated test suite
 
-`php tests\smoke.php` — 39 assertions covering storefront pages, order tracking, cart API (CSRF header
-+ stale-token recovery), cart line removal, checkout with coupon, order idempotency, admin auth gate,
-all Phase 6/7 admin pages, the admin sidebar icons, the CSV import UI/sample download, the single-order
-print stylesheet, category image upload, custom size settings, social/WhatsApp settings, the National
-Tech Forge footer credit, made-to-order size controls, and product share buttons.
-**Result: 39 passed, 0 failed** (latest run 2026-11-23).
+`php tests\smoke.php` — 46 assertions covering storefront pages, storefront search, order tracking,
+cart API (CSRF header + stale-token recovery), cart line removal, checkout with coupon, order
+idempotency, admin auth gate, all Phase 6/7 admin pages, admin list searches, the admin sidebar
+icons, the CSV import UI/sample download, the single-order print stylesheet, category image upload,
+custom size settings, social/WhatsApp settings, the National Tech Forge footer credit,
+made-to-order size controls, and product share buttons.
+**Result: 46 passed, 0 failed** (latest run 2026-11-24).
 
 ## 2. Entry point & routing
 

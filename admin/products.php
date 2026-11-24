@@ -640,8 +640,9 @@ admin_layout('Products', function () use ($ADMIN, $action, $editId, $importPrevi
     $params = [];
     if ($q !== '') {
         $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q);
-        $where .= ' AND (name LIKE :q OR sku LIKE :q)';
-        $params[':q'] = "%$like%";
+        $where .= ' AND (name LIKE :q_name OR sku LIKE :q_sku)';
+        $params[':q_name'] = "%$like%";
+        $params[':q_sku']  = "%$like%";
     }
     $st = db()->prepare("SELECT id, name, sku, base_price, sale_price, status, is_featured FROM products WHERE $where ORDER BY id DESC LIMIT :l OFFSET :o");
     foreach ($params as $k => $v) { $st->bindValue($k, $v, PDO::PARAM_STR); }

@@ -460,8 +460,11 @@ admin_layout('Orders', function () use ($ADMIN, $view, $orderId, $ALLOWED_TRANSI
     }
     if ($q !== '') {
         $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q);
-        $where[] = '(order_number LIKE :q OR full_name LIKE :q OR phone LIKE :q OR email LIKE :q)';
-        $params[':q'] = "%$like%";
+        $where[] = '(order_number LIKE :q_number OR full_name LIKE :q_name OR phone LIKE :q_phone OR email LIKE :q_email)';
+        $params[':q_number'] = "%$like%";
+        $params[':q_name']   = "%$like%";
+        $params[':q_phone']  = "%$like%";
+        $params[':q_email']  = "%$like%";
     }
     $whereSql = implode(' AND ', $where);
 

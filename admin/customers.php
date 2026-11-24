@@ -26,8 +26,10 @@ admin_layout('Customers', function () use ($ADMIN) {
     $params = [];
     if ($q !== '') {
         $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q);
-        $where .= ' AND (c.name LIKE :q OR c.email LIKE :q OR c.phone LIKE :q)';
-        $params[':q'] = "%$like%";
+        $where .= ' AND (c.name LIKE :q_name OR c.email LIKE :q_email OR c.phone LIKE :q_phone)';
+        $params[':q_name']  = "%$like%";
+        $params[':q_email'] = "%$like%";
+        $params[':q_phone'] = "%$like%";
     }
 
     $st = db()->prepare(

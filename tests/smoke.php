@@ -75,9 +75,14 @@ function csrf_from(string $html): string
 [$s, $b] = http_get(BASE . '/', $cookieJar);
 check('home returns 200 with hero slider', $s === 200 && str_contains($b, 'data-hero'));
 check('home shows announcement bar', str_contains($b, 'bg-ink px-4 py-2'));
+check('mobile menu drawer shows the store brand', preg_match('/data-store-menu[\s\S]{0,900}P&amp;M|data-store-menu[\s\S]{0,900}Patches/', $b) === 1);
 
 [$s, $b] = http_get(BASE . '/shop', $cookieJar);
 check('shop returns 200 with products grid', $s === 200);
+check('shop filters apply without the Apply button', str_contains($b, 'data-auto-filter'));
+
+[$s, $b] = http_get(BASE . '/shop?q=patch', $cookieJar);
+check('storefront search returns results', $s === 200 && str_contains($b, 'Search results'));
 
 [$s, $b] = http_get(BASE . '/product/floral-vine-patch', $cookieJar);
 check('product page returns 200 with buy form', $s === 200 && str_contains($b, 'Add to cart'));
@@ -249,6 +254,17 @@ if (!isset($creds['e'], $creds['p'])) {
     }
     check('admin sidebar shows an icon per option', $s === 200
         && $navIcons >= 18 && $navIcons === $navLabels);
+
+    // ---- 5c. Admin list searches (native prepares: one placeholder per use) ----
+    foreach ([
+        'orders'     => '/admin/orders?q=EMB',
+        'customers'  => '/admin/customers?q=test',
+        'products'   => '/admin/products?q=patch',
+        'activity'   => '/admin/activity?q=login',
+    ] as $label => $url) {
+        [$s, $b] = http_get(BASE . $url, $adminJar);
+        check("admin $label search works", $s === 200 && str_contains($b, 'Sign out'));
+    }
 
     // ---- 6. CSV import UI + print assets ----
     [$s, $b] = http_get(BASE . '/admin/products', $adminJar);
